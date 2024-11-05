@@ -16,6 +16,7 @@ import LoginPage from './pages/LoginPage';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import AdminDashboard from './pages/AdminDashboard';
+import DataEntryPage from './pages/DataEntryPage';
 
 const theme = createTheme({
   palette: {
@@ -53,6 +54,7 @@ function App() {
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/log-match" element={<DataEntryPage />} />
             </Routes>
           </div>
         </ThemeProvider>
