@@ -173,9 +173,10 @@ function SignupForm() {
             fontSize: '1rem',
             mb: 3,
             textAlign: 'center',
-            maxWidth: '300px',
+            maxWidth: '100%',
             lineHeight: 1.4,
-            fontWeight: 500
+            fontWeight: 500,
+            whiteSpace: 'nowrap'
           }}
         >
           Join us to start tracking your volleyball journey
