@@ -89,6 +89,21 @@ function Navbar() {
                 >
                   My Team
                 </Button>
+                {user.isAdmin && (
+                  <Button 
+                    color="inherit" 
+                    onClick={() => navigate('/admin')}
+                    sx={{ 
+                      bgcolor: 'primary.dark',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                        opacity: 0.9
+                      }
+                    }}
+                  >
+                    Admin Dashboard
+                  </Button>
+                )}
                 <IconButton
                   onClick={handleMenuOpen}
                   sx={{ 
@@ -102,7 +117,7 @@ function Navbar() {
                     sx={{ 
                       width: 32, 
                       height: 32,
-                      bgcolor: 'primary.dark'
+                      bgcolor: user.isAdmin ? 'secondary.main' : 'primary.dark'
                     }}
                   >
                     {user.firstName[0]}

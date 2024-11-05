@@ -101,7 +101,8 @@ exports.login = async (req, res) => {
         email: user.email,
         team: user.team,
         position: user.position,
-        jerseyNumber: user.jerseyNumber
+        jerseyNumber: user.jerseyNumber,
+        isAdmin: user.isAdmin
       }
     });
 
