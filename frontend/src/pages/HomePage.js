@@ -2,7 +2,7 @@ import { Typography, Container, Button, Box, Grid, Paper } from '@mui/material';
 
 function HomePage() {
   return (
-    <Container maxWidth="lg" sx={{ mt: 8, mb: 8 }}>
+    <Container maxWidth="lg" sx={{ mt: 8, mb: 8, userSelect: 'none' }}>
       {/* Hero Section */}
       <Box sx={{ textAlign: 'center', mb: 8 }}>
         <Typography variant="h3" component="h2" sx={{ mb: 2, fontWeight: 'bold' }}>
@@ -36,7 +36,7 @@ function HomePage() {
           }
         ].map((feature, index) => (
           <Grid item xs={12} md={4} key={index}>
-            <Paper elevation={0} sx={{ p: 3, height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+            <Paper elevation={0} sx={{ p: 3, height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.8)', cursor: 'default' }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
                 {feature.title}
               </Typography>

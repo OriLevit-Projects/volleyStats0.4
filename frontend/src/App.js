@@ -55,14 +55,20 @@ function NavBar() {
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            width: '100%'
+            width: '100%',
+            userSelect: 'none'
           }}>
             <Box 
               sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: 1,
-                cursor: 'pointer' 
+                cursor: 'pointer',
+                '&:hover': {
+                  '& .MuiTypography-root': {
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }
+                }
               }}
               onClick={() => navigate('/')}
             >

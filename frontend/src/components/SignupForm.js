@@ -131,8 +131,8 @@ function SignupForm() {
     <Container maxWidth="sm">
       <Box 
         sx={{ 
-          mt: 8, 
-          mb: 8,
+          mt: 4,
+          mb: 4,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -147,8 +147,8 @@ function SignupForm() {
           component="h1" 
           sx={{ 
             fontWeight: 600,
-            mb: 1.5,
-            fontSize: { xs: '2.2rem', sm: '2.8rem' },
+            mb: 1,
+            fontSize: { xs: '2rem', sm: '2.5rem' },
             color: theme.palette.primary.main,
             letterSpacing: '-0.5px',
             textAlign: 'center',
@@ -160,7 +160,7 @@ function SignupForm() {
               height: '3px',
               background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
               borderRadius: '2px',
-              margin: '12px auto 0',
+              margin: '8px auto 0',
             }
           }}
         >
@@ -170,11 +170,11 @@ function SignupForm() {
           variant="subtitle1"
           sx={{ 
             color: 'text.secondary',
-            fontSize: '1.1rem',
-            mb: 5,
+            fontSize: '1rem',
+            mb: 3,
             textAlign: 'center',
             maxWidth: '300px',
-            lineHeight: 1.5,
+            lineHeight: 1.4,
             fontWeight: 500
           }}
         >
@@ -184,13 +184,12 @@ function SignupForm() {
         <Box 
           component="form" 
           noValidate 
-          onSubmit={handleSubmit}
           sx={{ 
             width: '100%',
-            '& .MuiTextField-root': { mb: 2.5 },
+            '& .MuiTextField-root': { mb: 1.5 },
           }}
         >
-          <Grid container spacing={2}>
+          <Grid container spacing={1.5}>
             <Grid item xs={12} sm={6}>
               <TextField
                 required
@@ -386,9 +385,9 @@ function SignupForm() {
             variant="contained"
             size="large"
             sx={{ 
-              mt: 4,
-              mb: 2,
-              height: 56,
+              mt: 2,
+              mb: 1.5,
+              height: 48,
               borderRadius: 2,
               textTransform: 'none',
               fontSize: '1.1rem',
@@ -406,12 +405,13 @@ function SignupForm() {
             variant="body2" 
             color="text.secondary" 
             align="center" 
-            sx={{ mt: 2 }}
+            sx={{ mt: 1 }}
           >
             Already have an account? <Button 
               sx={{ 
                 textTransform: 'none',
                 fontWeight: 600,
+                py: 0,
                 '&:hover': {
                   background: 'transparent',
                   textDecoration: 'underline'
