@@ -22,12 +22,14 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Routes
 app.use('/api/auth', require('./src/routes/auth.routes'));
+app.use('/api/admin', require('./src/routes/admin.routes'));
+app.use('/api/teams', require('./src/routes/team.routes'));
+app.use('/api/users', require('./src/routes/user.routes'));
+
 app.post('/api/test', (req, res) => {
   console.log('Test endpoint hit with body:', req.body);
   res.json({ message: 'Test endpoint working' });
 });
-app.use('/api/admin', require('./src/routes/admin.routes'));
-app.use('/api/teams', require('./src/routes/team.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

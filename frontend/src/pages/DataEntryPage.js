@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 import {
   Container,
   Paper,
@@ -6,10 +8,13 @@ import {
   Button,
   Typography,
   Grid,
+  Alert,
   Divider
 } from '@mui/material';
 
 function DataEntryPage() {
+  const { user } = useAuth();
+  const [teammates, setTeammates] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedAction, setSelectedAction] = useState(null);
 
@@ -21,29 +26,68 @@ function DataEntryPage() {
     Set: ['Perfect Set', 'Off Set', 'Error']
   };
 
+  useEffect(() => {
+    const fetchTeammates = async () => {
+      try {
+        if (user?.team) {
+          const response = await axios.get(`/api/users/team/${encodeURIComponent(user.team)}`);
+          setTeammates(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching teammates:', error);
+      }
+    };
+
+    fetchTeammates();
+  }, [user?.team]);
+
+  // Common styles
+  const noSelectStyle = {
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none',
+    cursor: 'default'
+  };
+
+  const buttonStyle = {
+    minWidth: '120px',
+    ...noSelectStyle,
+    '&:hover': {
+      cursor: 'pointer'
+    }
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, ...noSelectStyle }}>
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
+        <Typography variant="h5" gutterBottom sx={noSelectStyle}>
           Record Match Data
         </Typography>
 
+        <Alert severity="info" sx={{ mb: 2, ...noSelectStyle }}>
+          Current user: {user?.firstName} {user?.lastName}
+          <br />
+          Team: {user?.team || 'No team assigned'}
+        </Alert>
+
         {/* Players Section */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={noSelectStyle}>
             Select Player
           </Typography>
           <Grid container spacing={2}>
-            <Grid item>
-              <Button
-                variant="outlined"
-                onClick={() => setSelectedPlayer("Player 1")}
-                sx={{ minWidth: '120px' }}
-              >
-                Player 1
-              </Button>
-            </Grid>
-            {/* Add more player buttons as needed */}
+            {teammates.map((player) => (
+              <Grid item key={player._id}>
+                <Button
+                  variant={selectedPlayer?._id === player._id ? "contained" : "outlined"}
+                  onClick={() => setSelectedPlayer(player)}
+                  sx={buttonStyle}
+                >
+                  {`${player.firstName} ${player.lastName}`}
+                </Button>
+              </Grid>
+            ))}
           </Grid>
         </Box>
 
@@ -52,7 +96,7 @@ function DataEntryPage() {
           <>
             <Divider sx={{ my: 3 }} />
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={noSelectStyle}>
                 Select Action
               </Typography>
               <Grid container spacing={2}>
@@ -61,7 +105,7 @@ function DataEntryPage() {
                     <Button
                       variant={selectedAction === action ? "contained" : "outlined"}
                       onClick={() => setSelectedAction(action)}
-                      sx={{ minWidth: '120px' }}
+                      sx={buttonStyle}
                     >
                       {action}
                     </Button>
@@ -77,7 +121,7 @@ function DataEntryPage() {
           <>
             <Divider sx={{ my: 3 }} />
             <Box>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={noSelectStyle}>
                 Select Result
               </Typography>
               <Grid container spacing={2}>
@@ -86,11 +130,11 @@ function DataEntryPage() {
                     <Button
                       variant="outlined"
                       onClick={() => {
-                        console.log(`Recording ${selectedAction} - ${result} for ${selectedPlayer}`);
+                        console.log(`Recording ${selectedAction} - ${result} for ${selectedPlayer.firstName}`);
                         setSelectedAction(null);
                         setSelectedPlayer(null);
                       }}
-                      sx={{ minWidth: '120px' }}
+                      sx={buttonStyle}
                     >
                       {result}
                     </Button>
