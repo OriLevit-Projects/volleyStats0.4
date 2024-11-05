@@ -17,6 +17,8 @@ import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import AdminDashboard from './pages/AdminDashboard';
 import DataEntryPage from './pages/DataEntryPage';
+import ProfilePage from './pages/ProfilePage';
+import PrivateRoute from './components/PrivateRoute';
 
 const theme = createTheme({
   palette: {
@@ -55,6 +57,14 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/log-match" element={<DataEntryPage />} />
+              <Route 
+                path="/profile" 
+                element={
+                  <PrivateRoute>
+                    <ProfilePage />
+                  </PrivateRoute>
+                } 
+              />
             </Routes>
           </div>
         </ThemeProvider>

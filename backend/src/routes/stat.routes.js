@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Stat = require('../models/stat.model');
+const authMiddleware = require('../middleware/auth.middleware');
+
+// Add auth middleware to protect routes
+router.use(authMiddleware);
 
 // Record new stat
 router.post('/', async (req, res) => {
@@ -51,11 +55,40 @@ router.post('/', async (req, res) => {
 // Get stats for a user
 router.get('/user/:userId', async (req, res) => {
   try {
+    console.log('Fetching stats for user:', req.params.userId);
+    
     const stats = await Stat.find({ userId: req.params.userId })
+      .populate('matchId', 'opponent date')
       .sort({ timestamp: -1 });
-    res.json(stats);
+    
+    // Group stats by action type for summary
+    const summary = stats.reduce((acc, stat) => {
+      if (!acc[stat.action]) {
+        acc[stat.action] = {
+          total: 0,
+          results: {}
+        };
+      }
+      
+      acc[stat.action].total++;
+      if (!acc[stat.action].results[stat.result]) {
+        acc[stat.action].results[stat.result] = 0;
+      }
+      acc[stat.action].results[stat.result]++;
+      
+      return acc;
+    }, {});
+
+    res.json({
+      stats,
+      summary
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching stats' });
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ 
+      message: 'Error fetching stats',
+      error: error.message 
+    });
   }
 });
 
