@@ -3,20 +3,16 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   lastName: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   email: {
     type: String,
     required: true,
-    unique: true,
-    trim: true,
-    lowercase: true
+    unique: true
   },
   password: {
     type: String,
@@ -28,25 +24,18 @@ const userSchema = new mongoose.Schema({
   },
   position: {
     type: String,
-    required: true,
-    enum: ['Outside Hitter', 'Middle Blocker', 'Setter', 'Opposite', 'Libero']
+    required: true
   },
   jerseyNumber: {
     type: Number,
-    required: true,
-    min: 0,
-    max: 99
+    required: true
   },
   isAdmin: {
     type: Boolean,
     default: false
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
+}, {
+  timestamps: true
 });
 
-const User = mongoose.model('User', userSchema);
-
-module.exports = User; 
+module.exports = mongoose.model('User', userSchema); 

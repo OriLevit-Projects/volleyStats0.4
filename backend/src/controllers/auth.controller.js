@@ -1,62 +1,39 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
+const Team = require('../models/team.model');
 
 exports.signup = async (req, res) => {
   try {
-    console.log('Received signup request with body:', req.body);
-    const { firstName, lastName, email, password, team, position, jerseyNumber } = req.body;
+    const { email, password, firstName, lastName, team, position, jerseyNumber } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
-    console.log('Existing user check:', existingUser ? 'User exists' : 'User does not exist');
-    
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists with this email' });
+      return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-    console.log('Password hashed successfully');
-
-    // Create new user
+    // Create the user
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
-      firstName,
-      lastName,
       email,
       password: hashedPassword,
+      firstName,
+      lastName,
       team,
       position,
       jerseyNumber
     });
 
-    console.log('Attempting to save user:', user);
     await user.save();
-    console.log('User saved successfully');
 
-    // Create token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+    // Add user to team
+    await Team.findOneAndUpdate(
+      { name: team },
+      { $addToSet: { players: user._id } }
     );
 
-    console.log('Token created successfully');
-
-    res.status(201).json({
-      message: 'User created successfully',
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        team: user.team,
-        position: user.position,
-        jerseyNumber: user.jerseyNumber
-      }
-    });
-
+    res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ message: 'Error creating user' });

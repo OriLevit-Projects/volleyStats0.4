@@ -41,4 +41,40 @@ export const deleteUser = async (userId) => {
   } catch (error) {
     throw error.response?.data?.message || 'Error deleting user';
   }
+};
+
+export const getAllTeams = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/teams`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || 'Error fetching teams';
+  }
+};
+
+export const createTeam = async (teamData) => {
+  try {
+    const response = await axios.post(`${API_URL}/teams`, teamData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || 'Error creating team';
+  }
+};
+
+export const updateTeam = async (teamId, teamData) => {
+  try {
+    const response = await axios.put(`${API_URL}/teams/${teamId}`, teamData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || 'Error updating team';
+  }
+};
+
+export const deleteTeam = async (teamId) => {
+  try {
+    const response = await axios.delete(`${API_URL}/teams/${teamId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || 'Error deleting team';
+  }
 }; 

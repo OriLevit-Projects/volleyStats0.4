@@ -12,4 +12,9 @@ router.get('/users', adminController.getAllUsers);
 router.put('/users/:userId', adminController.updateUser);
 router.delete('/users/:userId', adminController.deleteUser);
 
+router.get('/teams', adminController.getAllTeams);
+router.post('/teams', adminController.createTeam);
+router.put('/teams/:teamId', adminController.updateTeam);
+router.delete('/teams/:teamId', adminController.deleteTeam);
+
 module.exports = router; 

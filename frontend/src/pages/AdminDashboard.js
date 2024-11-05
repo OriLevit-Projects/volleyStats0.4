@@ -23,9 +23,12 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { getAllUsers, updateUser, deleteUser } from '../services/admin.service';
 import EditUserModal from '../components/EditUserModal';
+import TeamManagement from '../components/TeamManagement';
+import { getAllTeams, createTeam, updateTeam, deleteTeam } from '../services/admin.service';
+import '../styles/AdminDashboard.css';
 
 const UserManagement = ({ users, searchQuery, setSearchQuery, handleEditUser, handleDeleteUser }) => (
-  <Box sx={{ mt: 3 }}>
+  <Box sx={{ mt: 3 }} className="no-select">
     <TextField
       fullWidth
       variant="outlined"
@@ -46,12 +49,12 @@ const UserManagement = ({ users, searchQuery, setSearchQuery, handleEditUser, ha
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Name</TableCell>
-            <TableCell>Email</TableCell>
-            <TableCell>Team</TableCell>
-            <TableCell>Position</TableCell>
-            <TableCell>Jersey #</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell className="table-cell">Name</TableCell>
+            <TableCell className="table-cell">Email</TableCell>
+            <TableCell className="table-cell">Team</TableCell>
+            <TableCell className="table-cell">Position</TableCell>
+            <TableCell className="table-cell">Jersey #</TableCell>
+            <TableCell className="table-cell">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -63,11 +66,11 @@ const UserManagement = ({ users, searchQuery, setSearchQuery, handleEditUser, ha
             )
             .map((user) => (
               <TableRow key={user._id}>
-                <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.team}</TableCell>
-                <TableCell>{user.position}</TableCell>
-                <TableCell>{user.jerseyNumber}</TableCell>
+                <TableCell className="table-cell">{`${user.firstName} ${user.lastName}`}</TableCell>
+                <TableCell className="table-cell">{user.email}</TableCell>
+                <TableCell className="table-cell">{user.team}</TableCell>
+                <TableCell className="table-cell">{user.position}</TableCell>
+                <TableCell className="table-cell">{user.jerseyNumber}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleEditUser(user)}>
                     <EditIcon />
@@ -88,18 +91,30 @@ function AdminDashboard() {
   const [currentTab, setCurrentTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
   useEffect(() => {
     fetchUsers();
+    fetchTeams();
   }, []);
 
   const fetchUsers = async () => {
     try {
       const data = await getAllUsers();
       setUsers(data);
+    } catch (error) {
+      setMessage({ text: error.toString(), type: 'error' });
+    }
+  };
+
+  const fetchTeams = async () => {
+    try {
+      const data = await getAllTeams();
+      console.log('Fetched teams:', data);
+      setTeams(data);
     } catch (error) {
       setMessage({ text: error.toString(), type: 'error' });
     }
@@ -127,7 +142,8 @@ function AdminDashboard() {
       await updateUser(selectedUser._id, userData);
       setMessage({ text: 'User updated successfully', type: 'success' });
       setIsEditModalOpen(false);
-      fetchUsers(); // Refresh the list
+      await fetchUsers();
+      await fetchTeams();
     } catch (error) {
       setMessage({ text: error.toString(), type: 'error' });
     }
@@ -137,11 +153,37 @@ function AdminDashboard() {
     setCurrentTab(newValue);
   };
 
-  const TeamManagement = () => (
-    <Box sx={{ mt: 3 }}>
-      <Typography variant="h6">Team Management Coming Soon</Typography>
-    </Box>
-  );
+  const handleCreateTeam = async (teamData) => {
+    try {
+      await createTeam(teamData);
+      setMessage({ text: 'Team created successfully', type: 'success' });
+      fetchTeams();
+    } catch (error) {
+      setMessage({ text: error.toString(), type: 'error' });
+    }
+  };
+
+  const handleUpdateTeam = async (teamId, teamData) => {
+    try {
+      await updateTeam(teamId, teamData);
+      setMessage({ text: 'Team updated successfully', type: 'success' });
+      fetchTeams();
+    } catch (error) {
+      setMessage({ text: error.toString(), type: 'error' });
+    }
+  };
+
+  const handleDeleteTeam = async (teamId) => {
+    if (window.confirm('Are you sure you want to delete this team?')) {
+      try {
+        await deleteTeam(teamId);
+        setMessage({ text: 'Team deleted successfully', type: 'success' });
+        fetchTeams();
+      } catch (error) {
+        setMessage({ text: error.toString(), type: 'error' });
+      }
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -162,7 +204,16 @@ function AdminDashboard() {
             handleDeleteUser={handleDeleteUser}
           />
         )}
-        {currentTab === 1 && <TeamManagement />}
+        
+        {currentTab === 1 && (
+          <TeamManagement
+            teams={teams}
+            onCreateTeam={handleCreateTeam}
+            onUpdateTeam={handleUpdateTeam}
+            onDeleteTeam={handleDeleteTeam}
+            onRefresh={fetchTeams}
+          />
+        )}
 
         {selectedUser && (
           <EditUserModal

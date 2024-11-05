@@ -27,6 +27,7 @@ app.post('/api/test', (req, res) => {
   res.json({ message: 'Test endpoint working' });
 });
 app.use('/api/admin', require('./src/routes/admin.routes'));
+app.use('/api/teams', require('./src/routes/team.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
