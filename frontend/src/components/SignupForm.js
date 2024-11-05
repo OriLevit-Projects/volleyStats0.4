@@ -9,6 +9,7 @@ import {
   Grid,
   useTheme
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,6 +25,7 @@ const isValidPassword = (password) => {
 
 function SignupForm() {
   const theme = useTheme();
+  const navigate = useNavigate();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -409,6 +411,7 @@ function SignupForm() {
             sx={{ mt: 1 }}
           >
             Already have an account? <Button 
+              onClick={() => navigate('/login')}
               sx={{ 
                 textTransform: 'none',
                 fontWeight: 600,
