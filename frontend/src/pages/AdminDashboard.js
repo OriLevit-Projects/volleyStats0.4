@@ -167,7 +167,8 @@ function AdminDashboard() {
     try {
       await updateTeam(teamId, teamData);
       setMessage({ text: 'Team updated successfully', type: 'success' });
-      fetchTeams();
+      await fetchTeams();
+      await fetchUsers();
     } catch (error) {
       setMessage({ text: error.toString(), type: 'error' });
     }
@@ -208,6 +209,7 @@ function AdminDashboard() {
         {currentTab === 1 && (
           <TeamManagement
             teams={teams}
+            users={users}
             onCreateTeam={handleCreateTeam}
             onUpdateTeam={handleUpdateTeam}
             onDeleteTeam={handleDeleteTeam}

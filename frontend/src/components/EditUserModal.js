@@ -92,7 +92,9 @@ function EditUserModal({ open, handleClose, user, handleSave }) {
                 name="team"
                 value={formData.team}
                 onChange={handleChange}
+                required
               >
+                <MenuItem value="None">None</MenuItem>
                 {teams.map((team) => (
                   <MenuItem key={team._id} value={team.name}>
                     {team.name}

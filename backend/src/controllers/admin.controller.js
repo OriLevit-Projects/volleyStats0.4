@@ -37,16 +37,16 @@ exports.updateUser = async (req, res) => {
 
     // Handle team changes
     if (oldTeam !== newTeam) {
-      // Remove from old team if it exists
-      if (oldTeam) {
+      // Remove from old team if it exists and isn't "None"
+      if (oldTeam && oldTeam !== "None") {
         await Team.findOneAndUpdate(
           { name: oldTeam },
           { $pull: { players: userId } }
         );
       }
 
-      // Add to new team
-      if (newTeam) {
+      // Add to new team if it isn't "None"
+      if (newTeam && newTeam !== "None") {
         await Team.findOneAndUpdate(
           { name: newTeam },
           { $addToSet: { players: userId } }
@@ -118,17 +118,59 @@ exports.createTeam = async (req, res) => {
 
 exports.updateTeam = async (req, res) => {
   try {
-    const team = await Team.findByIdAndUpdate(
-      req.params.teamId,
-      req.body,
-      { new: true }
-    ).populate('players', 'firstName lastName position jerseyNumber');
+    const { teamId } = req.params;
+    const updateData = req.body;
     
+    const team = await Team.findById(teamId);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
-    res.json(team);
+
+    // Get the current players before update
+    const currentPlayers = team.players.map(id => id.toString()) || [];
+    const newPlayers = updateData.players || [];
+
+    // Find removed players (players in current but not in new)
+    const removedPlayers = currentPlayers.filter(playerId => 
+      !newPlayers.includes(playerId)
+    );
+
+    // Find added players (players in new but not in current)
+    const addedPlayers = newPlayers.filter(playerId => 
+      !currentPlayers.includes(playerId)
+    );
+
+    // Update removed players' team field to "None"
+    if (removedPlayers.length > 0) {
+      await User.updateMany(
+        { _id: { $in: removedPlayers } },
+        { $set: { team: "None" } }
+      );
+    }
+
+    // Update added players' team field to the team name
+    if (addedPlayers.length > 0) {
+      await User.updateMany(
+        { _id: { $in: addedPlayers } },
+        { $set: { team: updateData.name } }
+      );
+    }
+
+    // Update team data
+    team.name = updateData.name;
+    team.wins = updateData.wins;
+    team.losses = updateData.losses;
+    team.players = updateData.players;
+
+    await team.save();
+
+    // Fetch the updated team with populated players
+    const updatedTeam = await Team.findById(teamId)
+      .populate('players', 'firstName lastName email position jerseyNumber');
+
+    res.json(updatedTeam);
   } catch (error) {
+    console.error('Error updating team:', error);
     res.status(500).json({ message: 'Error updating team' });
   }
 };

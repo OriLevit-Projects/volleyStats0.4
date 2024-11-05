@@ -20,7 +20,8 @@ const userSchema = new mongoose.Schema({
   },
   team: {
     type: String,
-    required: true
+    required: true,
+    default: 'None'
   },
   position: {
     type: String,

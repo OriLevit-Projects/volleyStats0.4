@@ -168,6 +168,7 @@ function SignupPage() {
             error={errors.team}
             helperText={errors.team && 'Team is required'}
           >
+            <MenuItem value="None">None</MenuItem>
             {teams.map((team) => (
               <MenuItem key={team._id} value={team.name}>
                 {team.name}
