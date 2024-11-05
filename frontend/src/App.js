@@ -13,6 +13,8 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import HomePage from './pages/HomePage';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
+import { AuthProvider } from './context/AuthContext';
+import Navbar from './components/Navbar';
 
 const theme = createTheme({
   palette: {
@@ -37,105 +39,23 @@ const theme = createTheme({
   },
 });
 
-function NavBar() {
-  const navigate = useNavigate();
-
-  return (
-    <AppBar 
-      position="static" 
-      elevation={1} 
-      sx={{ 
-        backgroundColor: 'primary.main',
-        backgroundImage: 'linear-gradient(to right, #1976d2, #1565c0)'
-      }}
-    >
-      <Toolbar>
-        <Container maxWidth="lg">
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            width: '100%',
-            userSelect: 'none'
-          }}>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1,
-                cursor: 'pointer',
-                '&:hover': {
-                  '& .MuiTypography-root': {
-                    color: 'rgba(255, 255, 255, 0.9)'
-                  }
-                }
-              }}
-              onClick={() => navigate('/')}
-            >
-              <SportVolleyballIcon sx={{ color: 'white' }} />
-              <Typography 
-                variant="h5" 
-                component="h1" 
-                sx={{ 
-                  color: 'white',
-                  fontWeight: 600
-                }}
-              >
-                Volleyball Stats Tracker
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button 
-                variant="outlined" 
-                sx={{ 
-                  color: 'white', 
-                  borderColor: 'white',
-                  '&:hover': {
-                    borderColor: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
-                onClick={() => navigate('/login')}
-              >
-                Login
-              </Button>
-              <Button 
-                variant="contained" 
-                sx={{ 
-                  backgroundColor: 'white',
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)'
-                  }
-                }}
-                onClick={() => navigate('/signup')}
-              >
-                Sign Up
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      </Toolbar>
-    </AppBar>
-  );
-}
-
 function App() {
   return (
-    <Router>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <div className="App">
-          <NavBar />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </div>
-      </ThemeProvider>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <div className="App">
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/login" element={<LoginPage />} />
+            </Routes>
+          </div>
+        </ThemeProvider>
+      </Router>
+    </AuthProvider>
   );
 }
 

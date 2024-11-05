@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Box, Paper, TextField, Button, Typography, Container } from '@mui/material';
+import { Box, Paper, TextField, Button, Typography, Container, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { login } from '../services/auth.service';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -14,6 +17,8 @@ function LoginPage() {
     email: false,
     password: false
   });
+
+  const [errorMessage, setErrorMessage] = useState('');
 
   const isValidEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,9 +46,12 @@ function LoginPage() {
     }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     
+    // Clear any previous error messages
+    setErrorMessage('');
+
     const newErrors = {
       email: !formData.email || !isValidEmail(formData.email),
       password: !formData.password
@@ -55,7 +63,15 @@ function LoginPage() {
       return;
     }
 
-    console.log('Login form submitted:', formData);
+    try {
+      const response = await login(formData.email, formData.password);
+      console.log('Login response:', response);
+      authLogin(response.user);
+      navigate('/');
+    } catch (error) {
+      console.error('Login error details:', error);
+      setErrorMessage(error.message);
+    }
   };
 
   return (
@@ -117,6 +133,19 @@ function LoginPage() {
           noValidate 
           sx={{ width: '100%' }}
         >
+          {errorMessage && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                width: '100%',
+                borderRadius: 2
+              }}
+              onClose={() => setErrorMessage('')}
+            >
+              {errorMessage}
+            </Alert>
+          )}
           <TextField
             margin="normal"
             required

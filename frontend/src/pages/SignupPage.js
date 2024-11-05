@@ -10,6 +10,7 @@ import {
   useTheme
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { signup } from '../services/auth.service';
 
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -104,10 +105,10 @@ function SignupForm() {
     }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    console.log('Form submitted with data:', formData);
     
-    // Check for empty fields and email format
     const newErrors = {
       firstName: !formData.firstName,
       lastName: !formData.lastName,
@@ -121,12 +122,21 @@ function SignupForm() {
 
     setErrors(newErrors);
 
-    // If any error exists, don't proceed
     if (Object.values(newErrors).some(error => error)) {
+      console.log('Form validation failed:', newErrors);
       return;
     }
 
-    console.log('Form submitted:', formData);
+    try {
+      const { confirmPassword, ...signupData } = formData;
+      console.log('Sending signup request with data:', signupData);
+      const response = await signup(signupData);
+      console.log('Signup response:', response);
+      navigate('/');
+    } catch (error) {
+      console.error('Signup error:', error);
+      alert(error);
+    }
   };
 
   return (
@@ -186,6 +196,7 @@ function SignupForm() {
 
         <Box 
           component="form" 
+          onSubmit={handleSubmit} 
           noValidate 
           sx={{ 
             width: '100%',
@@ -387,6 +398,10 @@ function SignupForm() {
             fullWidth
             variant="contained"
             size="large"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
             sx={{ 
               mt: 2,
               mb: 1.5,
