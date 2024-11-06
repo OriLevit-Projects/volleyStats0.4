@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { styled } from '@mui/material/styles';
+import { VOLLEYBALL_ACTIONS, SUCCESS_RESULTS } from '../utils/statConstants';
 
 const NoSelectBox = styled(Box)({
   userSelect: 'none',
@@ -26,11 +27,11 @@ const StatEntry = ({ match, team }) => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const actions = {
-    'Serve': ['Ace', 'Error', 'In Play'],
-    'Spike': ['Kill', 'Error', 'In Play'],
-    'Dig': ['Good', 'Error', 'In Play'],
-    'Block': ['Point', 'Touch', 'Error'],
-    'Set': ['Assist', 'Error', 'In Play']
+    'Serve': ['ace', 'out of system', 'in play', 'error'],
+    'Serve Recieve': ['perfect', 'decent', 'out of system', 'error'],
+    'Set': ['perfect', 'decent', 'error', 'setter dump'],
+    'Spike': ['Kill', 'block out', 'in play', 'error', 'hard blocked', 'soft blocked'],
+    'Block': ['Kill block', 'soft block', 'error']
   };
 
   useEffect(() => {

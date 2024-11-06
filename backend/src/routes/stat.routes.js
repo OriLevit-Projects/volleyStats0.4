@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Stat = require('../models/stat.model');
+const Match = require('../models/match.model');
 const authMiddleware = require('../middleware/auth.middleware');
 
 // Add auth middleware to protect routes

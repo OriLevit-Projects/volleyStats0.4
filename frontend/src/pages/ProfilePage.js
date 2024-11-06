@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { debounce } from 'lodash';
 import {
   Container,
@@ -12,11 +12,36 @@ import {
   Grid,
   Alert,
   Snackbar,
-  InputAdornment
+  InputAdornment,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Collapse,
+  IconButton
 } from '@mui/material';
-import { CheckCircle, Error } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { VOLLEYBALL_ACTIONS, SUCCESS_RESULTS } from '../utils/statConstants';
+import { styled } from '@mui/material/styles';
+
+const NoSelectBox = styled(Box)({
+  userSelect: 'none',
+  cursor: 'default',
+  '& *': {
+    userSelect: 'none'
+  }
+});
 
 function ProfilePage() {
   const { user, login } = useAuth();
@@ -25,6 +50,13 @@ function ProfilePage() {
   const [emailError, setEmailError] = useState('');
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [statsError, setStatsError] = useState('');
+  const [selectedAction, setSelectedAction] = useState('all');
+  const [selectedResult, setSelectedResult] = useState('all');
+  const [selectedMatch, setSelectedMatch] = useState('all');
+  const [expandedAction, setExpandedAction] = useState(null);
 
   // Get the correct ID regardless of data structure
   const getUserId = (userData) => {
@@ -164,6 +196,73 @@ function ProfilePage() {
     }
   };
 
+  // Update the useEffect to use the correct endpoint
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+      
+      setLoadingStats(true);
+      setStatsError('');
+      
+      try {
+        const token = localStorage.getItem('token');
+        const userId = getUserId(user);
+        const response = await axios.get(`/api/stats/user/${userId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        setStats(response.data);
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+        setStatsError('Failed to load statistics');
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  const calculateStats = (statsData) => {
+    if (!statsData?.stats) return null;
+
+    const allStats = statsData.stats.reduce((acc, stat) => {
+      if (!acc[stat.action]) {
+        acc[stat.action] = {
+          total: 0,
+          results: {}
+        };
+      }
+      
+      acc[stat.action].total++;
+      if (!acc[stat.action].results[stat.result]) {
+        acc[stat.action].results[stat.result] = 0;
+      }
+      acc[stat.action].results[stat.result]++;
+      
+      return acc;
+    }, {});
+
+    return allStats;
+  };
+
+  // Update the success results mapping
+  const getSuccessRate = (action, result) => {
+    const successMapping = {
+      'Serve': ['ace', 'in play'],
+      'Serve Recieve': ['perfect', 'decent'],
+      'Set': ['perfect', 'decent', 'setter dump'],
+      'Spike': ['Kill', 'block out'],
+      'Block': ['Kill block', 'soft block']
+    };
+
+    return successMapping[action]?.includes(result) || false;
+  };
+
+  const formatPercentage = (count, total) => {
+    return `${((count/total)*100).toFixed(1)}%`;
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ p: 3 }}>
@@ -216,9 +315,9 @@ function ProfilePage() {
                       <InputAdornment position="end">
                         {userData.email !== user.email && (
                           isEmailValid ? (
-                            <CheckCircle color="success" />
+                            <CheckCircleIcon color="success" />
                           ) : (
-                            <Error color="error" />
+                            <ErrorIcon color="error" />
                           )
                         )}
                       </InputAdornment>
@@ -290,7 +389,159 @@ function ProfilePage() {
         )}
 
         {currentTab === 1 && (
-          <Typography>Statistics coming soon...</Typography>
+          <NoSelectBox>
+            {loadingStats ? (
+              <Typography>Loading statistics...</Typography>
+            ) : statsError ? (
+              <Alert severity="error">{statsError}</Alert>
+            ) : !stats?.stats?.length ? (
+              <Typography>No statistics available</Typography>
+            ) : (
+              <NoSelectBox>
+                {/* Filters */}
+                <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+                  <FormControl sx={{ minWidth: 120 }}>
+                    <InputLabel>Action</InputLabel>
+                    <Select
+                      value={selectedAction}
+                      label="Action"
+                      onChange={(e) => setSelectedAction(e.target.value)}
+                    >
+                      <MenuItem value="all">All Actions</MenuItem>
+                      {Object.keys(stats.summary).map((action) => (
+                        <MenuItem key={action} value={action}>{action}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl sx={{ minWidth: 120 }}>
+                    <InputLabel>Result</InputLabel>
+                    <Select
+                      value={selectedResult}
+                      label="Result"
+                      onChange={(e) => setSelectedResult(e.target.value)}
+                    >
+                      <MenuItem value="all">All Results</MenuItem>
+                      {Array.from(new Set(stats.stats.map(stat => stat.result))).map((result) => (
+                        <MenuItem key={result} value={result}>{result}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl sx={{ minWidth: 120 }}>
+                    <InputLabel>Match</InputLabel>
+                    <Select
+                      value={selectedMatch}
+                      label="Match"
+                      onChange={(e) => setSelectedMatch(e.target.value)}
+                    >
+                      <MenuItem value="all">All Matches</MenuItem>
+                      {Array.from(new Set(stats.stats.map(stat => stat.matchId?._id))).map((matchId) => {
+                        const match = stats.stats.find(s => s.matchId?._id === matchId)?.matchId;
+                        return match ? (
+                          <MenuItem key={matchId} value={matchId}>
+                            {new Date(match.date).toLocaleDateString()} vs {match.opponent}
+                          </MenuItem>
+                        ) : null;
+                      })}
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                {/* Statistics Table */}
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell style={{ width: '48px', padding: '6px' }} />
+                        <TableCell 
+                          align="left"
+                          style={{ paddingLeft: '0px' }}
+                        >
+                          Action
+                        </TableCell>
+                        <TableCell align="right">Total</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Object.entries(stats.summary)
+                        .filter(([action]) => selectedAction === 'all' || selectedAction === action)
+                        .map(([action, data]) => {
+                          const filteredStats = stats.stats.filter(stat => 
+                            stat.action === action &&
+                            (selectedResult === 'all' || stat.result === selectedResult) &&
+                            (selectedMatch === 'all' || stat.matchId?._id === selectedMatch)
+                          );
+
+                          return (
+                            <React.Fragment key={action}>
+                              <TableRow 
+                                sx={{ 
+                                  '& > *': { borderBottom: 'unset' },
+                                  cursor: 'pointer',
+                                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                                }}
+                                onClick={() => setExpandedAction(expandedAction === action ? null : action)}
+                              >
+                                <TableCell style={{ width: '48px', padding: '6px' }}>
+                                  <IconButton size="small">
+                                    {expandedAction === action ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                  </IconButton>
+                                </TableCell>
+                                <TableCell 
+                                  align="left"
+                                  style={{ paddingLeft: '0px' }}
+                                >
+                                  {action}
+                                </TableCell>
+                                <TableCell align="right">{filteredStats.length}</TableCell>
+                              </TableRow>
+                              
+                              {/* Expanded Details Row */}
+                              <TableRow>
+                                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={3}>
+                                  <Collapse in={expandedAction === action} timeout="auto" unmountOnExit>
+                                    <Box sx={{ margin: 2 }}>
+                                      <Typography variant="h6" gutterBottom component="div">
+                                        Detailed Results
+                                      </Typography>
+                                      <Table size="small">
+                                        <TableHead>
+                                          <TableRow>
+                                            <TableCell>Result</TableCell>
+                                            <TableCell align="right">Count</TableCell>
+                                            <TableCell align="right">Percentage</TableCell>
+                                          </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                          {Object.entries(data.results)
+                                            .filter(([result]) => selectedResult === 'all' || selectedResult === result)
+                                            .map(([result, count]) => (
+                                              <TableRow key={result}>
+                                                <TableCell component="th" scope="row">
+                                                  {result}
+                                                </TableCell>
+                                                <TableCell align="right">{count}</TableCell>
+                                                <TableCell align="right">
+                                                  {formatPercentage(count, data.total)}
+                                                </TableCell>
+                                              </TableRow>
+                                            ))}
+                                        </TableBody>
+                                      </Table>
+                                    </Box>
+                                  </Collapse>
+                                </TableCell>
+                              </TableRow>
+                            </React.Fragment>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </NoSelectBox>
+            )}
+          </NoSelectBox>
         )}
 
         <Snackbar

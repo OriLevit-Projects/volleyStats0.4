@@ -22,7 +22,7 @@ const statSchema = new mongoose.Schema({
   action: {
     type: String,
     required: true,
-    enum: ['Serve', 'Attack', 'Set', 'Block', 'Reception', 'Defense']
+    enum: ['Serve', 'Serve Recieve', 'Set', 'Spike', 'Block']
   },
   result: {
     type: String,
