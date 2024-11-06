@@ -26,6 +26,7 @@ import EditUserModal from '../components/EditUserModal';
 import TeamManagement from '../components/TeamManagement';
 import { getAllTeams, createTeam, updateTeam, deleteTeam } from '../services/admin.service';
 import '../styles/AdminDashboard.css';
+import axios from 'axios';
 
 const UserManagement = ({ users, searchQuery, setSearchQuery, handleEditUser, handleDeleteUser }) => (
   <Box sx={{ mt: 3 }} className="no-select">
@@ -165,12 +166,24 @@ function AdminDashboard() {
 
   const handleUpdateTeam = async (teamId, teamData) => {
     try {
-      await updateTeam(teamId, teamData);
-      setMessage({ text: 'Team updated successfully', type: 'success' });
-      await fetchTeams();
-      await fetchUsers();
+      const token = localStorage.getItem('token');
+      console.log('Updating team with data:', teamData);
+
+      const response = await axios.put(`/api/teams/${teamId}`, teamData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Update response:', response.data);
+
+      // Refresh the teams list
+      fetchTeams();
+
     } catch (error) {
-      setMessage({ text: error.toString(), type: 'error' });
+      console.error('Error updating team:', error);
+      // Handle error (show message to user, etc.)
     }
   };
 

@@ -20,47 +20,59 @@ router.get('/', async (req, res) => {
 });
 
 // Update team (including adding/removing players)
-router.put('/:teamId', async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const { teamId } = req.params;
-    const { name, players, wins, losses } = req.body;
+    console.log('1. Update request received for team:', req.params.id);
+    console.log('2. Request body:', JSON.stringify(req.body, null, 2));
 
-    const oldTeam = await Team.findById(teamId);
-    if (!oldTeam) {
+    const team = await Team.findById(req.params.id);
+    if (!team) {
+      console.log('3. Team not found');
       return res.status(404).json({ message: 'Team not found' });
     }
+    console.log('4. Found team:', team.name);
 
-    // Update the team with all fields
-    const team = await Team.findByIdAndUpdate(
-      teamId,
-      { 
-        name, 
-        players,
-        wins: wins !== undefined ? wins : oldTeam.wins,
-        losses: losses !== undefined ? losses : oldTeam.losses
-      },
-      { new: true }
-    ).populate('players', 'firstName lastName email position jerseyNumber');
+    if (req.body.matches) {
+      console.log('5. Processing matches update');
+      if (!Array.isArray(req.body.matches)) {
+        console.log('6. Matches is not an array:', typeof req.body.matches);
+        return res.status(400).json({ message: 'Matches must be an array' });
+      }
 
-    // Update user team associations
-    if (players) {
-      // Remove team from all users who were in this team
-      await User.updateMany(
-        { team: oldTeam.name },
-        { $unset: { team: "" } }
+      // Filter out any matches with empty location or opponent
+      const validMatches = req.body.matches.filter(match => 
+        match.location?.trim() && match.opponent?.trim()
       );
 
-      // Add team to new players
-      await User.updateMany(
-        { _id: { $in: players } },
-        { team: name || oldTeam.name }
-      );
+      const formattedMatches = validMatches.map(match => {
+        console.log('7. Processing match:', match);
+        return {
+          date: new Date(match.date),
+          location: String(match.location).trim(),
+          opponent: String(match.opponent).trim(),
+          score: {
+            us: Number(match.score.us) || 0,
+            them: Number(match.score.them) || 0
+          }
+        };
+      });
+
+      console.log('9. Formatted matches:', JSON.stringify(formattedMatches, null, 2));
+      team.matches = formattedMatches;
     }
 
-    res.json(team);
+    // Save and respond
+    const savedTeam = await team.save();
+    console.log('10. Team saved successfully');
+    
+    const updatedTeam = await Team.findById(savedTeam._id).populate('players');
+    res.json(updatedTeam);
+
   } catch (error) {
-    console.error('Error updating team:', error);
-    res.status(500).json({ message: 'Error updating team' });
+    console.error('Error in team update:', error);
+    res.status(400).json({
+      message: error.message || 'Error updating team'
+    });
   }
 });
 

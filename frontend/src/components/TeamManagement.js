@@ -32,6 +32,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import '../styles/AdminDashboard.css';
+import axios from 'axios';
 
 function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam, onRefresh }) {
   const [open, setOpen] = useState(false);
@@ -106,11 +107,59 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
     handleClose();
   };
 
-  const handleAddMatch = (teamId) => {
-    const updatedTeam = teams.find(t => t._id === teamId);
-    if (updatedTeam) {
-      updatedTeam.matches = [...updatedTeam.matches, matchData];
-      onUpdateTeam(teamId, updatedTeam);
+  const handleAddMatch = async (teamId) => {
+    try {
+      // Validate fields
+      if (!matchData.location || !matchData.opponent) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const team = teams.find(t => t._id === teamId);
+      
+      if (!team) {
+        console.error('Team not found');
+        return;
+      }
+
+      // Create new match object
+      const newMatch = {
+        date: matchData.date,
+        location: matchData.location.trim(),
+        opponent: matchData.opponent.trim(),
+        score: {
+          us: parseInt(matchData.score.us) || 0,
+          them: parseInt(matchData.score.them) || 0
+        }
+      };
+
+      // Get valid existing matches (filter out empty ones)
+      const existingMatches = (team.matches || []).filter(match => 
+        match.location?.trim() && match.opponent?.trim()
+      );
+
+      // Create request payload
+      const requestPayload = {
+        matches: [...existingMatches, newMatch]
+      };
+
+      console.log('Sending payload:', requestPayload);
+
+      const response = await axios.put(
+        `/api/teams/${teamId}`,
+        requestPayload,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('7. Server response:', response.data);
+
+      // Close dialog and reset form
       setMatchDialogOpen(false);
       setMatchData({
         date: new Date().toISOString().split('T')[0],
@@ -118,6 +167,24 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
         opponent: '',
         score: { us: 0, them: 0 }
       });
+
+      // Refresh the teams list
+      if (onRefresh) {
+        await onRefresh();
+      }
+
+    } catch (error) {
+      console.error('Error in handleAddMatch:', error);
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Error adding match: ';
+      if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else if (error.message) {
+        errorMessage += error.message;
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -472,58 +539,92 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
       </Dialog>
 
       {/* Add Match Dialog */}
-      <Dialog open={matchDialogOpen} onClose={() => setMatchDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={matchDialogOpen} 
+        onClose={() => setMatchDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+      >
         <DialogTitle>Add Match</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <TextField
+              required
               type="date"
               label="Match Date"
               value={matchData.date}
-              onChange={(e) => setMatchData({ ...matchData, date: e.target.value })}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                console.log('Setting date:', newValue);
+                setMatchData(prev => ({ ...prev, date: newValue }));
+              }}
               fullWidth
               sx={{ mb: 2 }}
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
             />
             <TextField
+              required
               fullWidth
               label="Location"
               value={matchData.location}
-              onChange={(e) => setMatchData({ ...matchData, location: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                console.log('Setting location:', value);
+                setMatchData(prev => ({
+                  ...prev,
+                  location: value
+                }));
+              }}
               sx={{ mb: 2 }}
+              error={!matchData.location}
+              helperText={!matchData.location ? "Location is required" : ""}
             />
             <TextField
+              required
               fullWidth
               label="Opponent"
               value={matchData.opponent}
-              onChange={(e) => setMatchData({ ...matchData, opponent: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                console.log('Setting opponent:', value);
+                setMatchData(prev => ({
+                  ...prev,
+                  opponent: value
+                }));
+              }}
               sx={{ mb: 2 }}
+              error={!matchData.opponent}
+              helperText={!matchData.opponent ? "Opponent is required" : ""}
             />
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <TextField
+                  fullWidth
                   type="number"
                   label="Our Score"
-                  fullWidth
                   value={matchData.score.us}
-                  onChange={(e) => setMatchData({
-                    ...matchData,
-                    score: { ...matchData.score, us: parseInt(e.target.value) }
-                  })}
+                  onChange={(e) => {
+                    console.log('Our score changed:', e.target.value);
+                    setMatchData(prev => ({
+                      ...prev,
+                      score: { ...prev.score, us: e.target.value }
+                    }));
+                  }}
                 />
               </Grid>
               <Grid item xs={6}>
                 <TextField
+                  fullWidth
                   type="number"
                   label="Their Score"
-                  fullWidth
                   value={matchData.score.them}
-                  onChange={(e) => setMatchData({
-                    ...matchData,
-                    score: { ...matchData.score, them: parseInt(e.target.value) }
-                  })}
+                  onChange={(e) => {
+                    console.log('Their score changed:', e.target.value);
+                    setMatchData(prev => ({
+                      ...prev,
+                      score: { ...prev.score, them: e.target.value }
+                    }));
+                  }}
                 />
               </Grid>
             </Grid>
@@ -531,7 +632,11 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setMatchDialogOpen(false)}>Cancel</Button>
-          <Button onClick={() => handleAddMatch(expandedTeam)} variant="contained">
+          <Button 
+            onClick={() => handleAddMatch(expandedTeam)}
+            variant="contained"
+            disabled={!matchData.location || !matchData.opponent}
+          >
             Add Match
           </Button>
         </DialogActions>
