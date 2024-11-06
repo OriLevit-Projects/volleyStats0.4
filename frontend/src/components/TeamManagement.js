@@ -56,6 +56,8 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
   const [availablePlayers, setAvailablePlayers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPlayers, setFilteredPlayers] = useState([]);
+  const [editMatchDialogOpen, setEditMatchDialogOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
   useEffect(() => {
     // Initialize filtered players with all users
@@ -222,6 +224,74 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
     }
   };
 
+  const handleEditMatch = (match, teamId) => {
+    setSelectedMatch({ ...match, teamId });
+    setEditMatchDialogOpen(true);
+  };
+
+  const handleDeleteMatch = async (matchId, teamId) => {
+    if (window.confirm('Are you sure you want to delete this match?')) {
+      try {
+        const team = teams.find(t => t._id === teamId);
+        if (!team) return;
+
+        // Filter out the match to delete
+        const updatedMatches = team.matches.filter(match => match._id !== matchId);
+
+        const response = await axios.put(
+          `/api/teams/${teamId}`,
+          { matches: updatedMatches },
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } catch (error) {
+        console.error('Error deleting match:', error);
+        alert('Error deleting match');
+      }
+    }
+  };
+
+  const handleUpdateMatch = async (teamId, updatedMatch) => {
+    try {
+      const team = teams.find(t => t._id === teamId);
+      if (!team) return;
+
+      // Update the specific match in the matches array
+      const updatedMatches = team.matches.map(match => 
+        match._id === updatedMatch._id ? updatedMatch : match
+      );
+
+      const response = await axios.put(
+        `/api/teams/${teamId}`,
+        { matches: updatedMatches },
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      setEditMatchDialogOpen(false);
+      setSelectedMatch(null);
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Error updating match:', error);
+      alert('Error updating match');
+    }
+  };
+
   return (
     <Box sx={{ mt: 3 }} className="no-select">
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -358,20 +428,41 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
                               <TableCell>Location</TableCell>
                               <TableCell>Opponent</TableCell>
                               <TableCell>Score</TableCell>
+                              <TableCell>Actions</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {team.matches?.map((match, index) => (
-                              <TableRow key={index}>
+                            {team.matches?.map((match) => (
+                              <TableRow key={match._id}>
                                 <TableCell>{formatDate(match.date)}</TableCell>
                                 <TableCell>{match.location}</TableCell>
                                 <TableCell>{match.opponent}</TableCell>
                                 <TableCell>{`${match.score.us} - ${match.score.them}`}</TableCell>
+                                <TableCell>
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditMatch(match, team._id);
+                                    }}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton 
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteMatch(match._id, team._id);
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
                               </TableRow>
                             ))}
                             {(!team.matches || team.matches.length === 0) && (
                               <TableRow>
-                                <TableCell colSpan={4} align="center">
+                                <TableCell colSpan={5} align="center">
                                   No matches recorded
                                 </TableCell>
                               </TableRow>
@@ -638,6 +729,117 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
             disabled={!matchData.location || !matchData.opponent}
           >
             Add Match
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Match Dialog */}
+      <Dialog 
+        open={editMatchDialogOpen} 
+        onClose={() => {
+          setEditMatchDialogOpen(false);
+          setSelectedMatch(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Edit Match</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              required
+              type="date"
+              label="Match Date"
+              value={selectedMatch ? selectedMatch.date.split('T')[0] : ''}
+              onChange={(e) => {
+                setSelectedMatch(prev => ({
+                  ...prev,
+                  date: e.target.value
+                }));
+              }}
+              fullWidth
+              sx={{ mb: 2 }}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              required
+              fullWidth
+              label="Location"
+              value={selectedMatch?.location || ''}
+              onChange={(e) => {
+                setSelectedMatch(prev => ({
+                  ...prev,
+                  location: e.target.value
+                }));
+              }}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              required
+              fullWidth
+              label="Opponent"
+              value={selectedMatch?.opponent || ''}
+              onChange={(e) => {
+                setSelectedMatch(prev => ({
+                  ...prev,
+                  opponent: e.target.value
+                }));
+              }}
+              sx={{ mb: 2 }}
+            />
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Our Score"
+                  value={selectedMatch?.score.us || 0}
+                  onChange={(e) => {
+                    setSelectedMatch(prev => ({
+                      ...prev,
+                      score: {
+                        ...prev.score,
+                        us: parseInt(e.target.value) || 0
+                      }
+                    }));
+                  }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Their Score"
+                  value={selectedMatch?.score.them || 0}
+                  onChange={(e) => {
+                    setSelectedMatch(prev => ({
+                      ...prev,
+                      score: {
+                        ...prev.score,
+                        them: parseInt(e.target.value) || 0
+                      }
+                    }));
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setEditMatchDialogOpen(false);
+              setSelectedMatch(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => handleUpdateMatch(selectedMatch.teamId, selectedMatch)}
+            variant="contained"
+            disabled={!selectedMatch?.location || !selectedMatch?.opponent}
+          >
+            Save Changes
           </Button>
         </DialogActions>
       </Dialog>
