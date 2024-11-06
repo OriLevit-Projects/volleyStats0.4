@@ -24,12 +24,16 @@ import {
   Select,
   MenuItem,
   Collapse,
-  IconButton
+  IconButton,
+  Checkbox,
+  ListItemText
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { VOLLEYBALL_ACTIONS, SUCCESS_RESULTS } from '../utils/statConstants';
@@ -55,6 +59,8 @@ function ProfilePage() {
   const [statsError, setStatsError] = useState('');
   const [selectedMatch, setSelectedMatch] = useState('all');
   const [expandedAction, setExpandedAction] = useState(null);
+  const [selectedMatches, setSelectedMatches] = useState([]);
+  const [compareMode, setCompareMode] = useState(false);
 
   // Get the correct ID regardless of data structure
   const getUserId = (userData) => {
@@ -303,6 +309,31 @@ function ProfilePage() {
     }, {});
   };
 
+  const getStatsForMatch = (matchId) => {
+    if (!stats?.stats) return null;
+
+    const matchStats = stats.stats.filter(stat => 
+      stat.matchId?._id === matchId
+    );
+
+    return matchStats.reduce((acc, stat) => {
+      if (!acc[stat.action]) {
+        acc[stat.action] = {
+          total: 0,
+          results: {}
+        };
+      }
+      
+      acc[stat.action].total++;
+      if (!acc[stat.action].results[stat.result]) {
+        acc[stat.action].results[stat.result] = 0;
+      }
+      acc[stat.action].results[stat.result]++;
+      
+      return acc;
+    }, {});
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ p: 3 }}>
@@ -430,12 +461,124 @@ function ProfilePage() {
 
         {currentTab === 1 && (
           <NoSelectBox>
-            {loadingStats ? (
-              <Typography>Loading statistics...</Typography>
-            ) : statsError ? (
-              <Alert severity="error">{statsError}</Alert>
-            ) : !stats?.stats?.length ? (
-              <Typography>No statistics available</Typography>
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+              <FormControl sx={{ minWidth: 300, flexGrow: 1 }}>
+                <InputLabel id="match-select-label">Select Matches</InputLabel>
+                <Select
+                  labelId="match-select-label"
+                  multiple
+                  value={selectedMatches}
+                  onChange={(e) => {
+                    setSelectedMatches(e.target.value);
+                    if (e.target.value.length === 0) {
+                      setSelectedMatch('all');
+                    } else if (e.target.value.length === 1) {
+                      setSelectedMatch(e.target.value[0]);
+                    }
+                  }}
+                  renderValue={(selected) => {
+                    if (selected.length === 0) return 'All Matches';
+                    return `${selected.length} match${selected.length > 1 ? 'es' : ''} selected`;
+                  }}
+                  sx={{
+                    '& .MuiSelect-select': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }
+                  }}
+                  label="Select Matches"
+                >
+                  {stats?.stats
+                    .reduce((matches, stat) => {
+                      if (stat.matchId && !matches.find(m => m._id === stat.matchId._id)) {
+                        matches.push(stat.matchId);
+                      }
+                      return matches;
+                    }, [])
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map(match => (
+                      <MenuItem key={match._id} value={match._id}>
+                        <Checkbox checked={selectedMatches.indexOf(match._id) > -1} />
+                        <ListItemText 
+                          primary={`${new Date(match.date).toLocaleDateString()} vs ${match.opponent}`}
+                          secondary={match.location}
+                        />
+                      </MenuItem>
+                    ))
+                  }
+                </Select>
+              </FormControl>
+
+              <Button
+                variant="outlined"
+                startIcon={<CompareArrowsIcon />}
+                onClick={() => setCompareMode(!compareMode)}
+                disabled={selectedMatches.length < 2}
+                color={compareMode ? "primary" : "inherit"}
+              >
+                Compare
+              </Button>
+
+              {(selectedMatches.length > 0 || compareMode) && (
+                <IconButton 
+                  onClick={() => {
+                    setSelectedMatches([]);
+                    setCompareMode(false);
+                    setSelectedMatch('all');
+                  }}
+                  size="small"
+                >
+                  <ClearIcon />
+                </IconButton>
+              )}
+            </Box>
+
+            {/* Comparison View */}
+            {compareMode && selectedMatches.length >= 2 ? (
+              <Grid container spacing={2}>
+                {selectedMatches.map(matchId => {
+                  const matchStats = getStatsForMatch(matchId);
+                  const match = stats.stats.find(s => s.matchId?._id === matchId)?.matchId;
+                  
+                  return (
+                    <Grid item xs={12} md={6} key={matchId}>
+                      <Paper sx={{ p: 2 }}>
+                        <Typography variant="h6" gutterBottom>
+                          {new Date(match.date).toLocaleDateString()} vs {match.opponent}
+                        </Typography>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Action</TableCell>
+                                <TableCell align="right">Total</TableCell>
+                                <TableCell align="right">Success Rate</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {Object.entries(matchStats || {}).map(([action, data]) => (
+                                <TableRow key={action}>
+                                  <TableCell>{action}</TableCell>
+                                  <TableCell align="right">{data.total}</TableCell>
+                                  <TableCell align="right">
+                                    {formatPercentage(
+                                      Object.entries(data.results)
+                                        .filter(([result]) => getSuccessRate(action, result))
+                                        .reduce((sum, [_, count]) => sum + count, 0),
+                                      data.total
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    </Grid>
+                  );
+                })}
+              </Grid>
             ) : (
               <NoSelectBox>
                 {/* Filters - now only showing Match filter */}
