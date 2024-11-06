@@ -35,6 +35,19 @@ function EditUserModal({ open, handleClose, user, handleSave }) {
     fetchTeams();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        team: user.team || '',
+        position: user.position || '',
+        jerseyNumber: user.jerseyNumber || ''
+      });
+    }
+  }, [user]);
+
   const fetchTeams = async () => {
     try {
       const teamsData = await getAllTeams();
@@ -51,8 +64,20 @@ function EditUserModal({ open, handleClose, user, handleSave }) {
     });
   };
 
+  const onClose = () => {
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      team: '',
+      position: '',
+      jerseyNumber: ''
+    });
+    handleClose();
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit User</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
@@ -132,7 +157,7 @@ function EditUserModal({ open, handleClose, user, handleSave }) {
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
+        <Button onClick={onClose}>Cancel</Button>
         <Button onClick={() => handleSave(formData)} variant="contained">
           Save Changes
         </Button>
