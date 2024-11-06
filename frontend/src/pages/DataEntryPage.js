@@ -69,8 +69,8 @@ function DataEntryPage() {
       setUser(response.data);
 
       if (response.data.team) {
-        console.log('Fetching team data for team:', response.data.team);
-        const teamResponse = await axios.get(`/api/teams/name/${response.data.team}`, {
+        console.log('Fetching team data for team ID:', response.data.team);
+        const teamResponse = await axios.get('/api/teams/my-team', {
           headers: { 
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
