@@ -1,15 +1,15 @@
 export const VOLLEYBALL_ACTIONS = {
-  'Serve': ['ace', 'out of system', 'in play', 'error'],
-  'Serve Recieve': ['perfect', 'decent', 'out of system', 'error'],
-  'Set': ['perfect', 'decent', 'error', 'setter dump'],
-  'Spike': ['Kill', 'block out', 'in play', 'error', 'hard blocked', 'soft blocked'],
-  'Block': ['Kill block', 'soft block', 'error']
+  'Serve': ['Ace', 'Out of System', 'In Play', 'Error'],
+  'Serve Recieve': ['Perfect', 'Decent', 'Out of System', 'Error'],
+  'Set': ['Perfect', 'Decent', 'Error', 'Setter Dump'],
+  'Spike': ['Kill', 'Block Out', 'In Play', 'Error', 'Hard Blocked', 'Soft Blocked'],
+  'Block': ['Kill Block', 'Soft Block', 'Error']
 };
 
 export const SUCCESS_RESULTS = {
-  'Serve': ['ace', 'in play'],
-  'Serve Recieve': ['perfect', 'decent'],
-  'Set': ['perfect', 'decent', 'setter dump'],
-  'Spike': ['Kill', 'block out'],
-  'Block': ['Kill block', 'soft block']
+  'Serve': ['Ace', 'In Play'],
+  'Serve Recieve': ['Perfect', 'Decent'],
+  'Set': ['Perfect', 'Decent', 'Setter Dump'],
+  'Spike': ['Kill', 'Block Out'],
+  'Block': ['Kill Block', 'Soft Block']
 }; 

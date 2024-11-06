@@ -26,14 +26,6 @@ const StatEntry = ({ match, team }) => {
   const [selectedResult, setSelectedResult] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const actions = {
-    'Serve': ['ace', 'out of system', 'in play', 'error'],
-    'Serve Recieve': ['perfect', 'decent', 'out of system', 'error'],
-    'Set': ['perfect', 'decent', 'error', 'setter dump'],
-    'Spike': ['Kill', 'block out', 'in play', 'error', 'hard blocked', 'soft blocked'],
-    'Block': ['Kill block', 'soft block', 'error']
-  };
-
   useEffect(() => {
     console.log('Current team data:', team);
     console.log('Current selected player:', selectedPlayer);
@@ -54,6 +46,9 @@ const StatEntry = ({ match, team }) => {
     try {
       const token = localStorage.getItem('token');
       
+      console.log('Match prop:', match);
+      console.log('Match ID:', match._id);
+      
       const statData = {
         userId: selectedPlayer._id,
         team: team.name,
@@ -64,6 +59,10 @@ const StatEntry = ({ match, team }) => {
       };
 
       console.log('Submitting stat data:', statData);
+
+      if (!match._id) {
+        throw new Error('Invalid match ID');
+      }
 
       const response = await axios.post('/api/stats', statData, {
         headers: {
@@ -139,7 +138,7 @@ const StatEntry = ({ match, team }) => {
             Select Action
           </Typography>
           <NoSelectBox sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {Object.keys(actions).map((action) => (
+            {Object.keys(VOLLEYBALL_ACTIONS).map((action) => (
               <Button
                 key={action}
                 variant={selectedAction === action ? "contained" : "outlined"}
@@ -162,7 +161,7 @@ const StatEntry = ({ match, team }) => {
             Select Result
           </Typography>
           <NoSelectBox sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {actions[selectedAction].map((result) => (
+            {VOLLEYBALL_ACTIONS[selectedAction].map((result) => (
               <Button
                 key={result}
                 variant="outlined"

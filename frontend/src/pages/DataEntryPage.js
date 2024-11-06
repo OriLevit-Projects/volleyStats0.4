@@ -95,7 +95,10 @@ function DataEntryPage() {
   };
 
   const handleMatchSelect = (event) => {
-    setSelectedMatch(event.target.value);
+    const matchId = event.target.value;
+    const selectedMatchData = matches.find(match => match._id === matchId);
+    console.log('Selected match:', selectedMatchData);
+    setSelectedMatch(selectedMatchData);
     setShowStatEntry(true);
   };
 
@@ -171,12 +174,12 @@ function DataEntryPage() {
             <FormControl fullWidth>
               <InputLabel>Select Match</InputLabel>
               <Select
-                value={selectedMatch}
+                value={selectedMatch?._id || ''}
                 label="Select Match"
                 onChange={handleMatchSelect}
               >
-                {matches.map((match, index) => (
-                  <MenuItem key={index} value={match}>
+                {matches.map((match) => (
+                  <MenuItem key={match._id} value={match._id}>
                     {formatMatchDate(match.date)} vs {match.opponent} - {match.location}
                   </MenuItem>
                 ))}

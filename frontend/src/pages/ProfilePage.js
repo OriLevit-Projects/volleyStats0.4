@@ -53,8 +53,6 @@ function ProfilePage() {
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [statsError, setStatsError] = useState('');
-  const [selectedAction, setSelectedAction] = useState('all');
-  const [selectedResult, setSelectedResult] = useState('all');
   const [selectedMatch, setSelectedMatch] = useState('all');
   const [expandedAction, setExpandedAction] = useState(null);
 
@@ -211,6 +209,10 @@ function ProfilePage() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
+        console.log('Raw stats response:', response.data);
+        console.log('Stats with matches:', response.data.stats.filter(stat => stat.matchId));
+        console.log('Unique matches:', new Set(response.data.stats.map(stat => stat.matchId?._id)));
+        
         setStats(response.data);
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -248,19 +250,57 @@ function ProfilePage() {
 
   // Update the success results mapping
   const getSuccessRate = (action, result) => {
-    const successMapping = {
-      'Serve': ['ace', 'in play'],
-      'Serve Recieve': ['perfect', 'decent'],
-      'Set': ['perfect', 'decent', 'setter dump'],
-      'Spike': ['Kill', 'block out'],
-      'Block': ['Kill block', 'soft block']
-    };
-
-    return successMapping[action]?.includes(result) || false;
+    return SUCCESS_RESULTS[action]?.includes(result) || false;
   };
 
   const formatPercentage = (count, total) => {
     return `${((count/total)*100).toFixed(1)}%`;
+  };
+
+  // Add this helper function
+  const getFormattedResult = (action, result) => {
+    return VOLLEYBALL_ACTIONS[action]?.find(r => r.toLowerCase() === result.toLowerCase()) || result;
+  };
+
+  // Add this helper function to get all possible results for an action
+  const getAllPossibleResults = () => {
+    return Object.values(VOLLEYBALL_ACTIONS)
+      .flat()
+      .reduce((unique, result) => {
+        if (!unique.includes(result)) {
+          unique.push(result);
+        }
+        return unique;
+      }, [])
+      .sort();
+  };
+
+  // First, create a filtered stats object based on the selected match
+  const getFilteredStats = () => {
+    if (!stats?.stats) return null;
+
+    // Filter stats based on selected match
+    const filteredStatsArray = stats.stats.filter(stat => 
+      selectedMatch === 'all' || stat.matchId?._id === selectedMatch
+    );
+
+    // Create summary from filtered stats
+    return filteredStatsArray.reduce((acc, stat) => {
+      if (!acc[stat.action]) {
+        acc[stat.action] = {
+          total: 0,
+          results: {}
+        };
+      }
+      
+      acc[stat.action].total++;
+      if (!acc[stat.action].results[stat.result]) {
+        acc[stat.action].results[stat.result] = 0;
+      }
+      acc[stat.action].results[stat.result]++;
+      
+      return acc;
+    }, {});
   };
 
   return (
@@ -398,36 +438,8 @@ function ProfilePage() {
               <Typography>No statistics available</Typography>
             ) : (
               <NoSelectBox>
-                {/* Filters */}
+                {/* Filters - now only showing Match filter */}
                 <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-                  <FormControl sx={{ minWidth: 120 }}>
-                    <InputLabel>Action</InputLabel>
-                    <Select
-                      value={selectedAction}
-                      label="Action"
-                      onChange={(e) => setSelectedAction(e.target.value)}
-                    >
-                      <MenuItem value="all">All Actions</MenuItem>
-                      {Object.keys(stats.summary).map((action) => (
-                        <MenuItem key={action} value={action}>{action}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <FormControl sx={{ minWidth: 120 }}>
-                    <InputLabel>Result</InputLabel>
-                    <Select
-                      value={selectedResult}
-                      label="Result"
-                      onChange={(e) => setSelectedResult(e.target.value)}
-                    >
-                      <MenuItem value="all">All Results</MenuItem>
-                      {Array.from(new Set(stats.stats.map(stat => stat.result))).map((result) => (
-                        <MenuItem key={result} value={result}>{result}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
                   <FormControl sx={{ minWidth: 120 }}>
                     <InputLabel>Match</InputLabel>
                     <Select
@@ -436,14 +448,24 @@ function ProfilePage() {
                       onChange={(e) => setSelectedMatch(e.target.value)}
                     >
                       <MenuItem value="all">All Matches</MenuItem>
-                      {Array.from(new Set(stats.stats.map(stat => stat.matchId?._id))).map((matchId) => {
-                        const match = stats.stats.find(s => s.matchId?._id === matchId)?.matchId;
-                        return match ? (
-                          <MenuItem key={matchId} value={matchId}>
-                            {new Date(match.date).toLocaleDateString()} vs {match.opponent}
-                          </MenuItem>
-                        ) : null;
-                      })}
+                      {stats.stats
+                        .filter(stat => stat.matchId && stat.matchId._id)
+                        .reduce((matches, stat) => {
+                          const matchExists = matches.find(m => m._id === stat.matchId._id);
+                          if (!matchExists && stat.matchId) {
+                            matches.push(stat.matchId);
+                          }
+                          return matches;
+                        }, [])
+                        .sort((a, b) => new Date(b.date) - new Date(a.date))
+                        .map(match => {
+                          console.log('Rendering match:', match);
+                          return (
+                            <MenuItem key={match._id} value={match._id}>
+                              {new Date(match.date).toLocaleDateString()} vs {match.opponent}
+                            </MenuItem>
+                          );
+                        })}
                     </Select>
                   </FormControl>
                 </Box>
@@ -464,14 +486,14 @@ function ProfilePage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {Object.entries(stats.summary)
-                        .filter(([action]) => selectedAction === 'all' || selectedAction === action)
+                      {Object.entries(getFilteredStats() || {})
                         .map(([action, data]) => {
                           const filteredStats = stats.stats.filter(stat => 
                             stat.action === action &&
-                            (selectedResult === 'all' || stat.result === selectedResult) &&
                             (selectedMatch === 'all' || stat.matchId?._id === selectedMatch)
                           );
+
+                          const isExpanded = expandedAction === action;
 
                           return (
                             <React.Fragment key={action}>
@@ -479,30 +501,73 @@ function ProfilePage() {
                                 sx={{ 
                                   '& > *': { borderBottom: 'unset' },
                                   cursor: 'pointer',
-                                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                                  backgroundColor: isExpanded ? 'rgba(25, 118, 210, 0.08)' : 'inherit',
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': { 
+                                    backgroundColor: isExpanded 
+                                      ? 'rgba(25, 118, 210, 0.12)' 
+                                      : 'rgba(0, 0, 0, 0.04)' 
+                                  },
+                                  // Add border and shadow when expanded
+                                  border: isExpanded ? '1px solid rgba(25, 118, 210, 0.5)' : 'none',
+                                  boxShadow: isExpanded ? '0 2px 4px rgba(25, 118, 210, 0.15)' : 'none',
+                                  // Dim other rows when one is expanded
+                                  opacity: expandedAction && !isExpanded ? 0.6 : 1,
+                                  // Add some spacing between rows
+                                  marginTop: isExpanded ? '8px' : '0px',
+                                  marginBottom: isExpanded ? '8px' : '0px',
+                                  // Round the corners when expanded
+                                  borderRadius: isExpanded ? '4px' : '0px',
+                                  // Ensure the row stands out
+                                  position: isExpanded ? 'relative' : 'static',
+                                  zIndex: isExpanded ? 1 : 'auto',
                                 }}
                                 onClick={() => setExpandedAction(expandedAction === action ? null : action)}
                               >
                                 <TableCell style={{ width: '48px', padding: '6px' }}>
-                                  <IconButton size="small">
-                                    {expandedAction === action ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                  <IconButton 
+                                    size="small"
+                                    sx={{
+                                      transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                      transition: 'transform 0.3s ease',
+                                      color: isExpanded ? 'primary.main' : 'action.active'
+                                    }}
+                                  >
+                                    <ExpandMoreIcon />
                                   </IconButton>
                                 </TableCell>
                                 <TableCell 
                                   align="left"
                                   style={{ paddingLeft: '0px' }}
+                                  sx={{
+                                    fontWeight: isExpanded ? 600 : 400,
+                                    color: isExpanded ? 'primary.main' : 'inherit'
+                                  }}
                                 >
                                   {action}
                                 </TableCell>
-                                <TableCell align="right">{filteredStats.length}</TableCell>
+                                <TableCell 
+                                  align="right"
+                                  sx={{
+                                    fontWeight: isExpanded ? 600 : 400,
+                                    color: isExpanded ? 'primary.main' : 'inherit'
+                                  }}
+                                >
+                                  {filteredStats.length}
+                                </TableCell>
                               </TableRow>
                               
                               {/* Expanded Details Row */}
                               <TableRow>
-                                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={3}>
-                                  <Collapse in={expandedAction === action} timeout="auto" unmountOnExit>
-                                    <Box sx={{ margin: 2 }}>
-                                      <Typography variant="h6" gutterBottom component="div">
+                                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+                                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                    <Box sx={{ margin: 1 }}>
+                                      <Typography 
+                                        variant="h6" 
+                                        gutterBottom 
+                                        component="div"
+                                        sx={{ color: 'primary.main' }}
+                                      >
                                         Detailed Results
                                       </Typography>
                                       <Table size="small">
@@ -515,11 +580,10 @@ function ProfilePage() {
                                         </TableHead>
                                         <TableBody>
                                           {Object.entries(data.results)
-                                            .filter(([result]) => selectedResult === 'all' || selectedResult === result)
                                             .map(([result, count]) => (
                                               <TableRow key={result}>
                                                 <TableCell component="th" scope="row">
-                                                  {result}
+                                                  {getFormattedResult(action, result)}
                                                 </TableCell>
                                                 <TableCell align="right">{count}</TableCell>
                                                 <TableCell align="right">

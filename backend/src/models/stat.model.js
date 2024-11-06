@@ -8,7 +8,6 @@ const statSchema = new mongoose.Schema({
   },
   matchId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Match',
     required: true
   },
   team: {
