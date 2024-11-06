@@ -95,18 +95,41 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
     setSearchQuery(''); // Reset search
   };
 
-  const handleSubmit = () => {
-    const updatedData = {
-      ...formData,
-      players: selectedPlayers
-    };
-    
-    if (selectedTeam) {
-      onUpdateTeam(selectedTeam._id, updatedData);
-    } else {
-      onCreateTeam(updatedData);
+  const handleSubmit = async () => {
+    try {
+      if (!formData.name.trim()) {
+        alert('Team name is required');
+        return;
+      }
+
+      if (selectedTeam) {
+        // Update existing team
+        await onUpdateTeam(selectedTeam._id, {
+          name: formData.name.trim(),
+          players: selectedPlayers // Array of selected player IDs
+        });
+      } else {
+        // Create new team
+        await onCreateTeam({
+          name: formData.name.trim(),
+          players: selectedPlayers
+        });
+      }
+
+      // Reset form and close dialog
+      setFormData({
+        name: '',
+        wins: 0,
+        losses: 0
+      });
+      setSelectedPlayers([]);
+      setSelectedTeam(null);
+      handleClose();
+
+    } catch (error) {
+      console.error('Error submitting team:', error);
+      alert(error.message || 'Error submitting team');
     }
-    handleClose();
   };
 
   const handleAddMatch = async (teamId) => {

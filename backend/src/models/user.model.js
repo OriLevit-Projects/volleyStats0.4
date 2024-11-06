@@ -19,9 +19,9 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   team: {
-    type: String,
-    required: true,
-    default: 'None'
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null
   },
   position: {
     type: String,

@@ -38,12 +38,27 @@ router.get('/me', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     console.log('GET /users request received');
-    const users = await User.find({}, '-password');
-    console.log('Users found in database:', users);
+    console.log('Current user (from auth):', req.user);
+    
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      console.log('Non-admin user attempted to access user list');
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const users = await User.find({}, '-password')
+      .populate('team', 'name');
+    
+    console.log('Users found:', users.length);
+    console.log('Users data:', JSON.stringify(users, null, 2));
+    
     res.json(users);
   } catch (error) {
     console.error('Error in GET /users:', error);
-    res.status(500).json({ message: 'Error fetching users' });
+    res.status(500).json({ 
+      message: 'Error fetching users',
+      error: error.message 
+    });
   }
 });
 
@@ -52,8 +67,13 @@ router.get('/team/:teamName', async (req, res) => {
     const { teamName } = req.params;
     console.log('Searching for team members in team:', teamName);
     
+    const team = await Team.findOne({ name: teamName });
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+    
     const teammates = await User.find(
-      { team: teamName },
+      { team: team._id },
       'firstName lastName email position jerseyNumber'
     );
     
@@ -94,40 +114,50 @@ router.put('/:userId', async (req, res) => {
         email: req.body.email || userToUpdate.email,
         position: req.body.position,
         jerseyNumber: req.body.jerseyNumber,
-        team: req.body.team,
         isAdmin: userToUpdate.isAdmin // Preserve admin status
       };
+
+      // Handle team assignment
+      if (req.body.team) {
+        const team = await Team.findOne({ name: req.body.team });
+        if (!team) {
+          return res.status(404).json({ 
+            message: `Team "${req.body.team}" not found` 
+          });
+        }
+        updates.team = team._id;
+        
+        // Remove from old team if exists
+        if (userToUpdate.team) {
+          await Team.findByIdAndUpdate(
+            userToUpdate.team,
+            { $pull: { players: userToUpdate._id } }
+          );
+        }
+        
+        // Add to new team
+        await Team.findByIdAndUpdate(
+          team._id,
+          { $addToSet: { players: userToUpdate._id } }
+        );
+      }
 
       const updatedUser = await User.findByIdAndUpdate(
         req.params.userId,
         updates,
         { new: true, runValidators: true }
-      ).select('-password');
-
-      // Handle team changes if needed
-      if (updates.team !== userToUpdate.team) {
-        // Remove from old team
-        if (userToUpdate.team) {
-          await Team.findOneAndUpdate(
-            { name: userToUpdate.team },
-            { $pull: { players: userToUpdate._id } }
-          );
-        }
-        // Add to new team
-        if (updates.team) {
-          await Team.findOneAndUpdate(
-            { name: updates.team },
-            { $addToSet: { players: userToUpdate._id } }
-          );
-        }
-      }
+      )
+      .select('-password')
+      .populate('team', 'name');
 
       return res.json(updatedUser);
     }
 
     // If not admin, check if user is updating their own profile
     if (req.user._id.toString() !== req.params.userId) {
-      return res.status(403).json({ message: 'Not authorized to update this profile' });
+      return res.status(403).json({ 
+        message: 'Not authorized to update this profile' 
+      });
     }
 
     // Regular user updating their own profile
@@ -136,15 +166,27 @@ router.put('/:userId', async (req, res) => {
       lastName: req.body.lastName,
       email: req.body.email,
       position: req.body.position,
-      jerseyNumber: req.body.jerseyNumber,
-      team: req.body.team
+      jerseyNumber: req.body.jerseyNumber
     };
+
+    // Handle team assignment for regular users
+    if (req.body.team) {
+      const team = await Team.findOne({ name: req.body.team });
+      if (!team) {
+        return res.status(404).json({ 
+          message: `Team "${req.body.team}" not found` 
+        });
+      }
+      updates.team = team._id;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.params.userId,
       updates,
       { new: true, runValidators: true }
-    ).select('-password');
+    )
+    .select('-password')
+    .populate('team', 'name');
 
     res.json(updatedUser);
 

@@ -20,58 +20,50 @@ router.get('/', async (req, res) => {
 });
 
 // Update team (including adding/removing players)
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:teamId', async (req, res) => {
   try {
-    console.log('1. Update request received for team:', req.params.id);
-    console.log('2. Request body:', JSON.stringify(req.body, null, 2));
-
-    const team = await Team.findById(req.params.id);
+    const team = await Team.findById(req.params.teamId);
     if (!team) {
-      console.log('3. Team not found');
       return res.status(404).json({ message: 'Team not found' });
     }
-    console.log('4. Found team:', team.name);
 
-    if (req.body.matches) {
-      console.log('5. Processing matches update');
-      if (!Array.isArray(req.body.matches)) {
-        console.log('6. Matches is not an array:', typeof req.body.matches);
-        return res.status(400).json({ message: 'Matches must be an array' });
-      }
+    // Get current players to handle removals
+    const currentPlayers = team.players || [];
+    const newPlayers = req.body.players || [];
 
-      // Filter out any matches with empty location or opponent
-      const validMatches = req.body.matches.filter(match => 
-        match.location?.trim() && match.opponent?.trim()
-      );
+    // Remove players that are no longer in the team
+    const removedPlayers = currentPlayers.filter(
+      playerId => !newPlayers.includes(playerId.toString())
+    );
 
-      const formattedMatches = validMatches.map(match => {
-        console.log('7. Processing match:', match);
-        return {
-          date: new Date(match.date),
-          location: String(match.location).trim(),
-          opponent: String(match.opponent).trim(),
-          score: {
-            us: Number(match.score.us) || 0,
-            them: Number(match.score.them) || 0
-          }
-        };
-      });
+    // Update user documents to remove team reference
+    await User.updateMany(
+      { _id: { $in: removedPlayers } },
+      { $unset: { team: "" } }
+    );
 
-      console.log('9. Formatted matches:', JSON.stringify(formattedMatches, null, 2));
-      team.matches = formattedMatches;
-    }
+    // Update user documents to add team reference for new players
+    await User.updateMany(
+      { _id: { $in: newPlayers } },
+      { $set: { team: team._id } }
+    );
 
-    // Save and respond
-    const savedTeam = await team.save();
-    console.log('10. Team saved successfully');
-    
-    const updatedTeam = await Team.findById(savedTeam._id).populate('players');
+    // Update team document
+    const updatedTeam = await Team.findByIdAndUpdate(
+      req.params.teamId,
+      {
+        name: req.body.name,
+        players: newPlayers
+      },
+      { new: true }
+    ).populate('players', 'firstName lastName email position jerseyNumber');
+
     res.json(updatedTeam);
-
   } catch (error) {
-    console.error('Error in team update:', error);
-    res.status(400).json({
-      message: error.message || 'Error updating team'
+    console.error('Error updating team:', error);
+    res.status(500).json({ 
+      message: 'Error updating team',
+      error: error.message 
     });
   }
 });
@@ -140,6 +132,119 @@ router.get('/name/:teamName', async (req, res) => {
   } catch (error) {
     console.error('Error fetching team by name:', error);
     res.status(500).json({ message: 'Error fetching team' });
+  }
+});
+
+// Add these new routes to your existing team.routes.js
+
+// Get my team
+router.get('/my-team', async (req, res) => {
+  try {
+    console.log('Fetching team for user:', req.user._id);
+    
+    const user = await User.findById(req.user._id)
+      .populate('team');
+    
+    if (!user.team) {
+      return res.status(404).json({ 
+        message: 'No team found for this user',
+        needsTeam: true
+      });
+    }
+
+    const team = await Team.findById(user.team._id)
+      .populate('players', 'firstName lastName email position jerseyNumber')
+      .populate('matches');
+
+    if (!team) {
+      return res.status(404).json({ 
+        message: 'Team not found',
+        needsTeam: true
+      });
+    }
+
+    // Calculate team statistics
+    const stats = {
+      totalMatches: team.matches.length,
+      wins: team.wins,
+      losses: team.losses,
+      winRate: team.matches.length > 0 
+        ? ((team.wins / (team.wins + team.losses)) * 100).toFixed(1) 
+        : 0
+    };
+
+    res.json({
+      ...team.toObject(),
+      stats
+    });
+  } catch (error) {
+    console.error('Error fetching team:', error);
+    res.status(500).json({ message: 'Error fetching team data' });
+  }
+});
+
+// Get team statistics
+router.get('/my-team/stats', async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('team');
+    if (!user.team) {
+      return res.status(404).json({ message: 'No team found for this user' });
+    }
+
+    const team = await Team.findById(user.team._id);
+    
+    // Calculate team statistics
+    const stats = {
+      totalMatches: team.matches.length,
+      wins: team.wins,
+      losses: team.losses,
+      winRate: team.matches.length > 0 
+        ? ((team.wins / (team.wins + team.losses)) * 100).toFixed(1) 
+        : 0
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching team stats:', error);
+    res.status(500).json({ message: 'Error fetching team statistics' });
+  }
+});
+
+// Add match to my team
+router.post('/my-team/matches', async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('team');
+    if (!user.team) {
+      return res.status(404).json({ message: 'No team found for this user' });
+    }
+
+    const { date, location, opponent, score } = req.body;
+    
+    const team = await Team.findById(user.team._id);
+    
+    team.matches.push({
+      date,
+      location,
+      opponent,
+      score: {
+        us: score.us,
+        them: score.them
+      }
+    });
+
+    // Update wins/losses
+    if (score.us > score.them) {
+      team.wins += 1;
+    } else {
+      team.losses += 1;
+    }
+
+    await team.save();
+
+    res.json(team);
+  } catch (error) {
+    console.error('Error adding match:', error);
+    res.status(500).json({ message: 'Error adding match' });
   }
 });
 

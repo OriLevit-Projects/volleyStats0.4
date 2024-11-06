@@ -66,17 +66,17 @@ const UserManagement = ({ users, searchQuery, setSearchQuery, handleEditUser, ha
               user.email.toLowerCase().includes(searchQuery.toLowerCase())
             )
             .map((user) => (
-              <TableRow key={user._id}>
+              <TableRow key={user._id || user.id}>
                 <TableCell className="table-cell">{`${user.firstName} ${user.lastName}`}</TableCell>
                 <TableCell className="table-cell">{user.email}</TableCell>
-                <TableCell className="table-cell">{user.team}</TableCell>
+                <TableCell className="table-cell">{user.team?.name || 'No Team'}</TableCell>
                 <TableCell className="table-cell">{user.position}</TableCell>
                 <TableCell className="table-cell">{user.jerseyNumber}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleEditUser(user)}>
                     <EditIcon />
                   </IconButton>
-                  <IconButton onClick={() => handleDeleteUser(user._id)}>
+                  <IconButton onClick={() => handleDeleteUser(user._id || user.id)}>
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -104,10 +104,24 @@ function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const data = await getAllUsers();
-      setUsers(data);
+      const token = localStorage.getItem('token');
+      console.log('Fetching users with token:', token ? 'Present' : 'Missing');
+      
+      const response = await axios.get('/api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Users response:', response.data);
+      setUsers(response.data);
     } catch (error) {
-      setMessage({ text: error.toString(), type: 'error' });
+      console.error('Error fetching users:', error.response?.data || error.message);
+      setMessage({ 
+        text: error.response?.data?.message || 'Error fetching users', 
+        type: 'error' 
+      });
     }
   };
 
@@ -169,21 +183,30 @@ function AdminDashboard() {
       const token = localStorage.getItem('token');
       console.log('Updating team with data:', teamData);
 
-      const response = await axios.put(`/api/teams/${teamId}`, teamData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await axios.put(`/api/teams/${teamId}`, 
+        {
+          name: teamData.name,
+          players: teamData.players
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
 
       console.log('Update response:', response.data);
 
-      // Refresh the teams list
-      fetchTeams();
+      await fetchTeams();
+      await fetchUsers();
 
     } catch (error) {
       console.error('Error updating team:', error);
-      // Handle error (show message to user, etc.)
+      setMessage({ 
+        text: error.response?.data?.message || 'Error updating team', 
+        type: 'error' 
+      });
     }
   };
 

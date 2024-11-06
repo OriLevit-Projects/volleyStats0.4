@@ -37,6 +37,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import DataEntryPage from './pages/DataEntryPage';
 import ProfilePage from './pages/ProfilePage';
 import PrivateRoute from './components/PrivateRoute';
+import MyTeamPage from './pages/MyTeamPage';
 
 const theme = createTheme({
   palette: {
@@ -80,6 +81,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <ProfilePage />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/my-team" 
+                element={
+                  <PrivateRoute>
+                    <MyTeamPage />
                   </PrivateRoute>
                 } 
               />
