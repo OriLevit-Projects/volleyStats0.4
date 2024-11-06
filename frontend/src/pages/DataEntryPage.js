@@ -14,7 +14,23 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import axios from 'axios';
+import StatEntry from '../components/StatEntry';
+
+const NoSelectContainer = styled(Container)({
+  userSelect: 'none',
+  cursor: 'default'
+});
+
+const StyledPaper = styled(Paper)({
+  padding: '24px',
+  marginTop: '24px',
+  backgroundColor: '#ffffff',
+  '& *': {
+    userSelect: 'none'
+  }
+});
 
 function DataEntryPage() {
   const [user, setUser] = useState(null);
@@ -87,49 +103,65 @@ function DataEntryPage() {
     return new Date(date).toLocaleDateString();
   };
 
+  const handleStatSubmit = async (stat) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('/api/stats', stat, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      // Optionally refresh match data or show success message
+    } catch (error) {
+      console.error('Error submitting stat:', error);
+      setError('Failed to submit stat');
+    }
+  };
+
   if (loading) {
     return (
-      <Container maxWidth="md">
-        <Paper sx={{ p: 3, mt: 3 }}>
+      <NoSelectContainer maxWidth="md">
+        <StyledPaper elevation={3}>
           <Typography>Loading data...</Typography>
-        </Paper>
-      </Container>
+        </StyledPaper>
+      </NoSelectContainer>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="md">
-        <Paper sx={{ p: 3, mt: 3 }}>
+      <NoSelectContainer maxWidth="md">
+        <StyledPaper elevation={3}>
           <Typography color="error">Error: {error}</Typography>
-        </Paper>
-      </Container>
+        </StyledPaper>
+      </NoSelectContainer>
     );
   }
 
   if (!user) {
     return (
-      <Container maxWidth="md">
-        <Paper sx={{ p: 3, mt: 3 }}>
+      <NoSelectContainer maxWidth="md">
+        <StyledPaper elevation={3}>
           <Typography>No user data available</Typography>
-        </Paper>
-      </Container>
+        </StyledPaper>
+      </NoSelectContainer>
     );
   }
 
   if (!team) {
     return (
-      <Container maxWidth="md">
-        <Paper sx={{ p: 3, mt: 3 }}>
+      <NoSelectContainer maxWidth="md">
+        <StyledPaper elevation={3}>
           <Typography>User found but no team data available. User team: {user.team || 'None'}</Typography>
-        </Paper>
-      </Container>
+        </StyledPaper>
+      </NoSelectContainer>
     );
   }
 
   return (
-    <Container maxWidth="md">
-      <Paper sx={{ p: 3, mt: 3 }}>
+    <NoSelectContainer maxWidth="md">
+      <StyledPaper elevation={3}>
         <Typography variant="h5" gutterBottom>
           Data Entry for {team.name}
         </Typography>
@@ -152,21 +184,28 @@ function DataEntryPage() {
             </FormControl>
           </Box>
         ) : (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Match Details:
-            </Typography>
-            <Typography>
-              Date: {formatMatchDate(selectedMatch.date)}
-              <br />
-              Opponent: {selectedMatch.opponent}
-              <br />
-              Location: {selectedMatch.location}
-              <br />
-              Score: {selectedMatch.score.us} - {selectedMatch.score.them}
-            </Typography>
+          <>
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Match Details:
+              </Typography>
+              <Typography>
+                Date: {formatMatchDate(selectedMatch.date)}
+                <br />
+                Opponent: {selectedMatch.opponent}
+                <br />
+                Location: {selectedMatch.location}
+                <br />
+                Score: {selectedMatch.score.us} - {selectedMatch.score.them}
+              </Typography>
+            </Box>
 
-            {/* Your existing stat entry form goes here */}
+            <StatEntry 
+              match={selectedMatch}
+              team={team}
+              players={team.players}
+              onStatSubmit={handleStatSubmit}
+            />
             
             <Button 
               variant="outlined" 
@@ -178,10 +217,10 @@ function DataEntryPage() {
             >
               Select Different Match
             </Button>
-          </Box>
+          </>
         )}
-      </Paper>
-    </Container>
+      </StyledPaper>
+    </NoSelectContainer>
   );
 }
 

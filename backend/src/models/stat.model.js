@@ -6,14 +6,23 @@ const statSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  matchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Match',
+    required: true
+  },
   team: {
+    type: String,
+    required: true
+  },
+  playerName: {
     type: String,
     required: true
   },
   action: {
     type: String,
     required: true,
-    enum: ['Serve', 'Spike', 'Dig', 'Block', 'Set']
+    enum: ['Serve', 'Attack', 'Set', 'Block', 'Reception', 'Defense']
   },
   result: {
     type: String,

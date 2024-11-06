@@ -9,9 +9,9 @@ router.use(authMiddleware);
 // Record new stat
 router.post('/', async (req, res) => {
   try {
-    console.log('Received request body:', req.body);
+    console.log('Received stat request body:', req.body);
     
-    const { userId, team, action, result } = req.body;
+    const { userId, team, action, result, playerName, matchId } = req.body;
     
     // Detailed validation logging
     const validationErrors = [];
@@ -20,6 +20,8 @@ router.post('/', async (req, res) => {
     if (!team) validationErrors.push('team is missing');
     if (!action) validationErrors.push('action is missing');
     if (!result) validationErrors.push('result is missing');
+    if (!playerName) validationErrors.push('playerName is missing');
+    if (!matchId) validationErrors.push('matchId is missing');
     
     if (validationErrors.length > 0) {
       console.log('Validation errors:', validationErrors);
@@ -34,7 +36,9 @@ router.post('/', async (req, res) => {
       userId,
       team,
       action,
-      result
+      result,
+      playerName,
+      matchId
     });
 
     console.log('Attempting to save stat:', newStat);
@@ -47,7 +51,8 @@ router.post('/', async (req, res) => {
     console.error('Error recording stat:', error);
     res.status(500).json({ 
       message: 'Error recording stat',
-      error: error.message 
+      error: error.message,
+      details: error.errors
     });
   }
 });
