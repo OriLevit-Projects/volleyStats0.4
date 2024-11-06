@@ -3,6 +3,7 @@ const router = express.Router();
 const Team = require('../models/team.model');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth.middleware');
+const Stat = require('../models/stat.model');
 
 router.use(authMiddleware);
 
@@ -245,6 +246,44 @@ router.post('/my-team/matches', async (req, res) => {
   } catch (error) {
     console.error('Error adding match:', error);
     res.status(500).json({ message: 'Error adding match' });
+  }
+});
+
+// Get detailed team stats
+router.get('/my-team/detailed-stats', async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('team');
+    if (!user.team) {
+      return res.status(404).json({ message: 'No team found for this user' });
+    }
+
+    const stats = await Stat.find({ team: user.team.name });
+    
+    // Create summary similar to user stats
+    const summary = stats.reduce((acc, stat) => {
+      if (!acc[stat.action]) {
+        acc[stat.action] = {
+          total: 0,
+          results: {}
+        };
+      }
+      
+      acc[stat.action].total++;
+      if (!acc[stat.action].results[stat.result]) {
+        acc[stat.action].results[stat.result] = 0;
+      }
+      acc[stat.action].results[stat.result]++;
+      
+      return acc;
+    }, {});
+
+    res.json({
+      stats,
+      summary
+    });
+  } catch (error) {
+    console.error('Error fetching team detailed stats:', error);
+    res.status(500).json({ message: 'Error fetching team statistics' });
   }
 });
 
