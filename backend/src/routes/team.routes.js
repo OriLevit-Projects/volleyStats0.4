@@ -117,4 +117,18 @@ router.delete('/:teamId', async (req, res) => {
   }
 });
 
+// Add this new route
+router.get('/name/:teamName', async (req, res) => {
+  try {
+    const team = await Team.findOne({ name: req.params.teamName }).populate('players');
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+    res.json(team);
+  } catch (error) {
+    console.error('Error fetching team by name:', error);
+    res.status(500).json({ message: 'Error fetching team' });
+  }
+});
+
 module.exports = router; 

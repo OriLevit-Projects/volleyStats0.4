@@ -1,35 +1,44 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
-module.exports = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     console.log('Auth middleware - Headers:', req.headers);
     
-    const token = req.headers.authorization?.split(' ')[1];
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      console.log('No authorization header');
+      return res.status(401).json({ message: 'No authorization header' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
     if (!token) {
-      return res.status(401).json({ message: 'No authentication token' });
+      console.log('No token found');
+      return res.status(401).json({ message: 'No token provided' });
     }
 
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded token:', decodedToken);
+    console.log('Token received:', token.substring(0, 20) + '...');
 
-    const user = await User.findById(decodedToken.userId);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Decoded token:', decoded);
+
+    const user = await User.findById(decoded.userId);
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      console.log('User not found:', decoded.userId);
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    // Store both the MongoDB _id and the string version
+    console.log('User found:', user.email);
     req.user = user;
-    req.userId = decodedToken.userId;
-    
-    console.log('Auth middleware - IDs:', {
-      tokenUserId: decodedToken.userId,
-      userObjectId: user._id.toString()
-    });
-
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    return res.status(401).json({ message: 'Authentication failed' });
+    console.error('Auth middleware error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(401).json({ message: 'Authentication failed', error: error.message });
   }
-}; 
+};
+
+module.exports = authMiddleware; 

@@ -16,7 +16,25 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-// Add this route at the top of your routes (before the team route)
+// THIS NEEDS TO BE FIRST - before any parameterized routes
+router.get('/me', async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('-password')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error in /me route:', error);
+    res.status(500).json({ message: 'Error fetching user' });
+  }
+});
+
+// Then your other routes in this order:
 router.get('/', async (req, res) => {
   try {
     console.log('GET /users request received');
@@ -29,7 +47,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get team members by team name (this needs to be first)
 router.get('/team/:teamName', async (req, res) => {
   try {
     const { teamName } = req.params;
@@ -48,7 +65,6 @@ router.get('/team/:teamName', async (req, res) => {
   }
 });
 
-// Get user by ID (this needs to be second)
 router.get('/:userId', async (req, res) => {
   try {
     const user = await User.findById(req.params.userId).select('-password');
@@ -63,7 +79,6 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
-// Add this new route for updating user profile
 router.put('/:userId', async (req, res) => {
   try {
     const userToUpdate = await User.findById(req.params.userId);
