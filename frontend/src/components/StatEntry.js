@@ -98,29 +98,58 @@ const StatEntry = ({ match, team }) => {
   };
 
   const buttonStyle = {
-    margin: '4px',
-    minWidth: '100px'
+    padding: '8px 16px',
+    textTransform: 'none',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   };
 
   const selectedButtonStyle = {
     ...buttonStyle,
     backgroundColor: '#1976d2',
-    color: 'white'
+    color: 'white',
+    '&:hover': {
+      backgroundColor: '#1565c0'
+    }
   };
 
   return (
-    <Paper sx={{ p: 2, mt: 2 }}>
+    <Paper sx={{ 
+      p: 3,
+      mt: 2,
+      width: '100%',
+      '& .MuiButton-root': {
+        minWidth: '120px',
+        margin: '6px'
+      },
+      '& .MuiBox-root': {
+        width: '100%'
+      }
+    }}>
       {/* Players Section */}
       <NoSelectBox sx={{ mb: 2 }}>
         <Typography variant="h6" gutterBottom>
           Select Player
         </Typography>
-        <NoSelectBox sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <NoSelectBox sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 2,
+          width: '100%'
+        }}>
           {team.players?.map((player) => (
             <Button
               key={player._id}
               variant={selectedPlayer?._id === player._id ? "contained" : "outlined"}
-              sx={selectedPlayer?._id === player._id ? selectedButtonStyle : buttonStyle}
+              sx={{
+                ...buttonStyle,
+                height: '48px',
+                fontSize: '1.1rem',
+                width: '100%',
+                minWidth: 'unset',
+                margin: 0
+              }}
               onClick={() => handlePlayerSelect(player)}
             >
               {player.jerseyNumber} - {player.firstName}

@@ -230,7 +230,7 @@ router.post('/my-team/matches', async (req, res) => {
       return res.status(404).json({ message: 'No team found for this user' });
     }
 
-    const { date, location, opponent, score } = req.body;
+    const { date, location, opponent, score, videoUrl } = req.body;
     
     const team = await Team.findById(user.team._id);
     
@@ -238,6 +238,7 @@ router.post('/my-team/matches', async (req, res) => {
       date,
       location,
       opponent,
+      videoUrl,
       score: {
         us: score.us,
         them: score.them
@@ -295,6 +296,38 @@ router.get('/my-team/detailed-stats', async (req, res) => {
   } catch (error) {
     console.error('Error fetching team detailed stats:', error);
     res.status(500).json({ message: 'Error fetching team statistics' });
+  }
+});
+
+// Add a route to update existing matches
+router.put('/my-team/matches/:matchId', async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('team');
+    if (!user.team) {
+      return res.status(404).json({ message: 'No team found for this user' });
+    }
+
+    const team = await Team.findById(user.team._id);
+    const match = team.matches.id(req.params.matchId);
+    
+    if (!match) {
+      return res.status(404).json({ message: 'Match not found' });
+    }
+
+    const { date, location, opponent, score, videoUrl } = req.body;
+    
+    // Update match fields
+    match.date = date;
+    match.location = location;
+    match.opponent = opponent;
+    match.videoUrl = videoUrl;
+    match.score = score;
+
+    await team.save();
+    res.json(team);
+  } catch (error) {
+    console.error('Error updating match:', error);
+    res.status(500).json({ message: 'Error updating match' });
   }
 });
 

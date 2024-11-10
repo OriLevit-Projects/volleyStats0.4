@@ -12,11 +12,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Grid
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
 import StatEntry from '../components/StatEntry';
+import YouTubePlayer from '../components/YouTubePlayer';
 
 const NoSelectContainer = styled(Container)({
   userSelect: 'none',
@@ -163,8 +165,8 @@ function DataEntryPage() {
   }
 
   return (
-    <NoSelectContainer maxWidth="md">
-      <StyledPaper elevation={3}>
+    <NoSelectContainer maxWidth="xxxl">
+      <StyledPaper elevation={3} sx={{ mx: 4 }}>
         <Typography variant="h5" gutterBottom>
           Data Entry for {team.name}
         </Typography>
@@ -187,40 +189,55 @@ function DataEntryPage() {
             </FormControl>
           </Box>
         ) : (
-          <>
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Match Details:
-              </Typography>
-              <Typography>
-                Date: {formatMatchDate(selectedMatch.date)}
-                <br />
-                Opponent: {selectedMatch.opponent}
-                <br />
-                Location: {selectedMatch.location}
-                <br />
-                Score: {selectedMatch.score.us} - {selectedMatch.score.them}
-              </Typography>
-            </Box>
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={selectedMatch.videoUrl ? 4 : 12}>
+              <Box sx={{ 
+                mt: 3, 
+                maxWidth: '100%',
+                '& .MuiPaper-root': {
+                  width: '100%',
+                  maxWidth: 'none'
+                }
+              }}>
+                <Typography variant="h6" gutterBottom>
+                  Match Details:
+                </Typography>
+                <Typography>
+                  Date: {formatMatchDate(selectedMatch.date)}
+                  <br />
+                  Opponent: {selectedMatch.opponent}
+                  <br />
+                  Location: {selectedMatch.location}
+                  <br />
+                  Score: {selectedMatch.score.us} - {selectedMatch.score.them}
+                </Typography>
+              </Box>
 
-            <StatEntry 
-              match={selectedMatch}
-              team={team}
-              players={team.players}
-              onStatSubmit={handleStatSubmit}
-            />
+              <StatEntry 
+                match={selectedMatch}
+                team={team}
+                players={team.players}
+                onStatSubmit={handleStatSubmit}
+              />
+              
+              <Button 
+                variant="outlined" 
+                sx={{ mt: 2 }}
+                onClick={() => {
+                  setSelectedMatch('');
+                  setShowStatEntry(false);
+                }}
+              >
+                Select Different Match
+              </Button>
+            </Grid>
             
-            <Button 
-              variant="outlined" 
-              sx={{ mt: 2 }}
-              onClick={() => {
-                setSelectedMatch('');
-                setShowStatEntry(false);
-              }}
-            >
-              Select Different Match
-            </Button>
-          </>
+            {selectedMatch.videoUrl && (
+              <Grid item xs={12} md={8}>
+                <YouTubePlayer videoUrl={selectedMatch.videoUrl} />
+              </Grid>
+            )}
+          </Grid>
         )}
       </StyledPaper>
     </NoSelectContainer>

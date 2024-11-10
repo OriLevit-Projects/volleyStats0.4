@@ -28,6 +28,10 @@ const matchSchema = new mongoose.Schema({
       default: 0,
       min: 0
     }
+  },
+  videoUrl: {
+    type: String,
+    trim: true
   }
 });
 

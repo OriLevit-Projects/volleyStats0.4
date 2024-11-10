@@ -5,38 +5,67 @@ const Team = require('../models/team.model');
 
 exports.signup = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, team, position, jerseyNumber } = req.body;
+    const { firstName, lastName, email, password, team: teamName, position, jerseyNumber } = req.body;
+
+    // First, find the team by name
+    const team = await Team.findOne({ name: teamName });
+    if (!team) {
+      return res.status(400).json({ message: 'Team not found' });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' });
+      return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create the user
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user with team ObjectId
     const user = new User({
-      email,
-      password: hashedPassword,
       firstName,
       lastName,
-      team,
+      email,
+      password: hashedPassword,
+      team: team._id, // Use the team's ObjectId instead of name
       position,
       jerseyNumber
     });
 
     await user.save();
 
-    // Add user to team
-    await Team.findOneAndUpdate(
-      { name: team },
-      { $addToSet: { players: user._id } }
+    // Add user to team's players array
+    team.players.push(user._id);
+    await team.save();
+
+    // Create token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
     );
 
-    res.status(201).json({ message: 'User registered successfully' });
+    res.status(201).json({
+      message: 'User created successfully',
+      token,
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        team: team.name, // Send back team name for display
+        position: user.position,
+        jerseyNumber: user.jerseyNumber
+      }
+    });
+
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ message: 'Error creating user' });
+    console.warn('Signup error:', error);
+    res.status(500).json({ 
+      message: 'Error creating user',
+      error: error.message 
+    });
   }
 };
 

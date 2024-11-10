@@ -46,10 +46,11 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
     players: []
   });
   const [matchData, setMatchData] = useState({
-    date: new Date().toISOString().split('T')[0], // Format: YYYY-MM-DD
+    date: new Date().toISOString().split('T')[0],
     location: '',
     opponent: '',
-    score: { us: 0, them: 0 }
+    score: { us: 0, them: 0 },
+    videoUrl: ''
   });
   const [dialogTab, setDialogTab] = useState(0);
   const [selectedPlayers, setSelectedPlayers] = useState([]);
@@ -132,48 +133,15 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
     }
   };
 
-  const handleAddMatch = async (teamId) => {
+  const handleAddMatch = async (team) => {
     try {
-      // Validate fields
-      if (!matchData.location || !matchData.opponent) {
-        alert('Please fill in all required fields');
-        return;
-      }
-
       const token = localStorage.getItem('token');
-      const team = teams.find(t => t._id === teamId);
-      
-      if (!team) {
-        console.error('Team not found');
-        return;
-      }
-
-      // Create new match object
-      const newMatch = {
-        date: matchData.date,
-        location: matchData.location.trim(),
-        opponent: matchData.opponent.trim(),
-        score: {
-          us: parseInt(matchData.score.us) || 0,
-          them: parseInt(matchData.score.them) || 0
-        }
-      };
-
-      // Get valid existing matches (filter out empty ones)
-      const existingMatches = (team.matches || []).filter(match => 
-        match.location?.trim() && match.opponent?.trim()
-      );
-
-      // Create request payload
-      const requestPayload = {
-        matches: [...existingMatches, newMatch]
-      };
-
-      console.log('Sending payload:', requestPayload);
-
-      const response = await axios.put(
-        `/api/teams/${teamId}`,
-        requestPayload,
+      await axios.post(
+        '/api/teams/my-team/matches',
+        {
+          ...matchData,
+          date: new Date(matchData.date),
+        },
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -182,34 +150,18 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
         }
       );
 
-      console.log('7. Server response:', response.data);
-
-      // Close dialog and reset form
-      setMatchDialogOpen(false);
+      // Reset form and refresh data
       setMatchData({
         date: new Date().toISOString().split('T')[0],
         location: '',
         opponent: '',
-        score: { us: 0, them: 0 }
+        score: { us: 0, them: 0 },
+        videoUrl: ''
       });
-
-      // Refresh the teams list
-      if (onRefresh) {
-        await onRefresh();
-      }
-
+      setMatchDialogOpen(false);
+      onRefresh();
     } catch (error) {
-      console.error('Error in handleAddMatch:', error);
-      console.error('Error response:', error.response?.data);
-      
-      let errorMessage = 'Error adding match: ';
-      if (error.response?.data?.message) {
-        errorMessage += error.response.data.message;
-      } else if (error.message) {
-        errorMessage += error.message;
-      }
-
-      alert(errorMessage);
+      console.error('Error adding match:', error);
     }
   };
 
@@ -282,22 +234,18 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
     }
   };
 
-  const handleUpdateMatch = async (teamId, updatedMatch) => {
+  const handleUpdateMatch = async (teamId, matchData) => {
     try {
-      const team = teams.find(t => t._id === teamId);
-      if (!team) return;
-
-      // Update the specific match in the matches array
-      const updatedMatches = team.matches.map(match => 
-        match._id === updatedMatch._id ? updatedMatch : match
-      );
-
-      const response = await axios.put(
-        `/api/teams/${teamId}`,
-        { matches: updatedMatches },
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `/api/teams/my-team/matches/${matchData._id}`,
+        {
+          ...matchData,
+          date: new Date(matchData.date)
+        },
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }
@@ -305,13 +253,9 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
 
       setEditMatchDialogOpen(false);
       setSelectedMatch(null);
-
-      if (onRefresh) {
-        await onRefresh();
-      }
+      onRefresh();
     } catch (error) {
       console.error('Error updating match:', error);
-      alert('Error updating match');
     }
   };
 
@@ -710,6 +654,19 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
               error={!matchData.opponent}
               helperText={!matchData.opponent ? "Opponent is required" : ""}
             />
+            <TextField
+              fullWidth
+              label="YouTube Video URL"
+              value={matchData.videoUrl || ''}
+              onChange={(e) => {
+                setMatchData(prev => ({
+                  ...prev,
+                  videoUrl: e.target.value
+                }));
+              }}
+              sx={{ mb: 2 }}
+              helperText="Enter the YouTube video URL for this match (optional)"
+            />
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <TextField
@@ -809,6 +766,19 @@ function TeamManagement({ teams, users, onCreateTeam, onUpdateTeam, onDeleteTeam
                 }));
               }}
               sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="YouTube Video URL"
+              value={selectedMatch?.videoUrl || ''}
+              onChange={(e) => {
+                setSelectedMatch(prev => ({
+                  ...prev,
+                  videoUrl: e.target.value
+                }));
+              }}
+              sx={{ mb: 2 }}
+              helperText="Enter the YouTube video URL for this match (optional)"
             />
             <Grid container spacing={2}>
               <Grid item xs={6}>
