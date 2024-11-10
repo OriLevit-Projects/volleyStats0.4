@@ -2,13 +2,7 @@ import axios from 'axios';
 
 export const getAllTeams = async () => {
   try {
-    const token = localStorage.getItem('token');
-    const response = await axios.get('/api/teams', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await axios.get('/api/teams/public');
     console.log('Teams fetched:', response.data);
     return response.data;
   } catch (error) {
@@ -16,6 +10,21 @@ export const getAllTeams = async () => {
       message: error.message,
       response: error.response?.data
     });
+    throw error.response?.data?.message || 'Error fetching teams';
+  }
+};
+
+export const getAllTeamsAuthenticated = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get('/api/teams', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
+  } catch (error) {
     throw error.response?.data?.message || 'Error fetching teams';
   }
 }; 

@@ -5,6 +5,17 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth.middleware');
 const Stat = require('../models/stat.model');
 
+// Public route for getting teams (for signup)
+router.get('/public', async (req, res) => {
+  try {
+    const teams = await Team.find({}, 'name');  // Only send team names
+    res.json(teams);
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    res.status(500).json({ message: 'Error fetching teams' });
+  }
+});
+
 router.use(authMiddleware);
 
 // Get all teams with populated players
