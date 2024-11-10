@@ -31,7 +31,8 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { VOLLEYBALL_ACTIONS } from '../utils/statConstants';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { VOLLEYBALL_ACTIONS, SUCCESS_RESULTS } from '../utils/statConstants';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -494,277 +495,115 @@ function MyTeamPage() {
             {detailedStats && (
               <TableContainer component={Paper}>
                 <Table>
-                  {showGrouped ? (
-                    // Existing grouped view
-                    <>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell style={{ width: '48px', padding: '6px' }} />
-                          <TableCell>Action</TableCell>
-                          <TableCell align="right">Total</TableCell>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell style={{ width: '48px' }} />
+                      <TableCell>Action</TableCell>
+                      <TableCell align="right">Total</TableCell>
+                      <TableCell align="right">Success Rate</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {Object.entries(getFilteredStats()).map(([action, data]) => (
+                      <React.Fragment key={action}>
+                        {/* Main Action Row */}
+                        <TableRow 
+                          sx={{ 
+                            cursor: 'pointer',
+                            backgroundColor: expandedAction === action ? 'rgba(25, 118, 210, 0.08)' : 'inherit',
+                            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                          }}
+                          onClick={() => setExpandedAction(expandedAction === action ? null : action)}
+                        >
+                          <TableCell>
+                            <IconButton size="small">
+                              {expandedAction === action ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 500 }}>{action}</TableCell>
+                          <TableCell align="right">{data.total}</TableCell>
+                          <TableCell align="right">
+                            {formatPercentage(
+                              Object.entries(data.results)
+                                .filter(([result]) => SUCCESS_RESULTS[action]?.includes(result))
+                                .reduce((sum, [_, count]) => sum + count, 0),
+                              data.total
+                            )}
+                          </TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {Object.entries(getFilteredStats()).map(([action, data]) => {
-                          const isExpanded = expandedAction === action;
-                          
-                          return (
-                            <React.Fragment key={action}>
-                              <TableRow 
-                                sx={{ 
-                                  '& > *': { borderBottom: 'unset' },
-                                  cursor: 'pointer',
-                                  backgroundColor: isExpanded ? 'rgba(25, 118, 210, 0.08)' : 'inherit',
-                                  transition: 'all 0.3s ease',
-                                  '&:hover': { 
-                                    backgroundColor: isExpanded 
-                                      ? 'rgba(25, 118, 210, 0.12)' 
-                                      : 'rgba(0, 0, 0, 0.04)' 
-                                  },
-                                  // Add border and shadow when expanded
-                                  border: isExpanded ? '1px solid rgba(25, 118, 210, 0.5)' : 'none',
-                                  boxShadow: isExpanded ? '0 2px 4px rgba(25, 118, 210, 0.15)' : 'none',
-                                  // Dim other rows when one is expanded
-                                  opacity: expandedAction && !isExpanded ? 0.6 : 1,
-                                  // Add some spacing between rows
-                                  marginTop: isExpanded ? '8px' : '0px',
-                                  marginBottom: isExpanded ? '8px' : '0px',
-                                  // Round the corners when expanded
-                                  borderRadius: isExpanded ? '4px' : '0px',
-                                  // Ensure the row stands out
-                                  position: isExpanded ? 'relative' : 'static',
-                                  zIndex: isExpanded ? 1 : 'auto',
-                                }}
-                                onClick={() => setExpandedAction(expandedAction === action ? null : action)}
-                              >
-                                <TableCell style={{ width: '48px', padding: '6px' }}>
-                                  <IconButton 
-                                    size="small"
-                                    sx={{
-                                      transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                      transition: 'transform 0.3s ease',
-                                      color: isExpanded ? 'primary.main' : 'action.active'
+
+                        {/* Expanded Results Section */}
+                        <TableRow>
+                          <TableCell colSpan={4} sx={{ py: 0 }}>
+                            <Collapse in={expandedAction === action}>
+                              <Box sx={{ py: 2 }}>
+                                {Object.entries(data.results).map(([result, count]) => (
+                                  <Paper 
+                                    key={result}
+                                    elevation={1}
+                                    sx={{ 
+                                      mb: 2,
+                                      p: 2,
+                                      backgroundColor: SUCCESS_RESULTS[action]?.includes(result) 
+                                        ? 'rgba(76, 175, 80, 0.04)'  // Light green for success
+                                        : result === 'Error' 
+                                          ? 'rgba(211, 47, 47, 0.04)'  // Light red for errors
+                                          : 'rgba(25, 118, 210, 0.04)', // Light blue for others
+                                      border: '1px solid',
+                                      borderColor: SUCCESS_RESULTS[action]?.includes(result)
+                                        ? 'rgba(76, 175, 80, 0.2)'
+                                        : result === 'Error'
+                                          ? 'rgba(211, 47, 47, 0.2)'
+                                          : 'rgba(25, 118, 210, 0.2)',
+                                      borderRadius: 1
                                     }}
                                   >
-                                    <ExpandMoreIcon />
-                                  </IconButton>
-                                </TableCell>
-                                <TableCell 
-                                  align="left"
-                                  style={{ paddingLeft: '0px' }}
-                                  sx={{
-                                    fontWeight: isExpanded ? 600 : 400,
-                                    color: isExpanded ? 'primary.main' : 'inherit'
-                                  }}
-                                >
-                                  {action}
-                                </TableCell>
-                                <TableCell 
-                                  align="right"
-                                  sx={{
-                                    fontWeight: isExpanded ? 600 : 400,
-                                    color: isExpanded ? 'primary.main' : 'inherit'
-                                  }}
-                                >
-                                  {data.total}
-                                </TableCell>
-                              </TableRow>
-
-                              {/* Expanded Details Row */}
-                              <TableRow>
-                                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={3}>
-                                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                                    <Box sx={{ 
-                                      margin: 2,
-                                      backgroundColor: '#fff',
-                                      borderRadius: '8px',
-                                      border: '1px solid rgba(25, 118, 210, 0.3)',
-                                      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                                      position: 'relative',
-                                      overflow: 'hidden'
-                                    }}>
-                                      {/* Blue accent bar at the top */}
-                                      <Box sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '4px',
-                                        backgroundColor: 'primary.main',
-                                        borderTopLeftRadius: '8px',
-                                        borderTopRightRadius: '8px'
-                                      }} />
-
-                                      <Box sx={{ p: 3 }}>
-                                        <Typography 
-                                          variant="h6" 
-                                          gutterBottom 
-                                          component="div"
-                                          sx={{ 
-                                            color: 'primary.main',
-                                            fontWeight: 600,
-                                            mb: 2
-                                          }}
-                                        >
-                                          Detailed Results
+                                    <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                                      {result}
+                                    </Typography>
+                                    <Grid container spacing={2} alignItems="center">
+                                      <Grid item xs={12} md={4}>
+                                        <Typography variant="body1">
+                                          Count: <strong>{count}</strong>
                                         </Typography>
-                                        
-                                        <TableContainer sx={{ 
-                                          backgroundColor: 'background.paper',
-                                          borderRadius: '4px',
-                                          border: '1px solid rgba(224, 224, 224, 1)'
-                                        }}>
-                                          <Table size="small">
-                                            <TableHead>
-                                              <TableRow>
-                                                <TableCell>Player</TableCell>
-                                                <TableCell>Result</TableCell>
-                                                <TableCell align="right">Count</TableCell>
-                                                <TableCell align="right">Percentage</TableCell>
-                                              </TableRow>
-                                            </TableHead>
-                                            <TableBody>
-                                              {Object.entries(data.players).map(([playerName, playerData]) => (
-                                                Object.entries(playerData.results).map(([result, count]) => (
-                                                  <TableRow 
-                                                    key={`${playerName}-${result}`}
-                                                    sx={{
-                                                      '&:last-child td, &:last-child th': { border: 0 },
-                                                      '&:hover': {
-                                                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                                                      }
-                                                    }}
-                                                  >
-                                                    <TableCell 
-                                                      component="th" 
-                                                      scope="row"
-                                                      sx={{ fontWeight: 500 }}
-                                                    >
-                                                      {playerName}
-                                                    </TableCell>
-                                                    <TableCell>{getFormattedResult(action, result)}</TableCell>
-                                                    <TableCell align="right">{count}</TableCell>
-                                                    <TableCell 
-                                                      align="right"
-                                                      sx={{ 
-                                                        color: 'text.secondary',
-                                                        fontWeight: 500
-                                                      }}
-                                                    >
-                                                      {formatPercentage(count, playerData.total)}
-                                                    </TableCell>
-                                                  </TableRow>
-                                                ))
-                                              ))}
-                                            </TableBody>
-                                          </Table>
-                                        </TableContainer>
-                                      </Box>
-                                    </Box>
-                                  </Collapse>
-                                </TableCell>
-                              </TableRow>
-                            </React.Fragment>
-                          );
-                        })}
-                      </TableBody>
-                    </>
-                  ) : (
-                    // New ungrouped view
-                    <>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell 
-                            onClick={() => handleSort('date')}
-                            sx={{ 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              backgroundColor: 'background.paper',
-                              borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                              '&:hover': { backgroundColor: 'action.hover' }
-                            }}
-                          >
-                            Date {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
-                          </TableCell>
-                          <TableCell 
-                            onClick={() => handleSort('match')}
-                            sx={{ 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              backgroundColor: 'background.paper',
-                              borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                              '&:hover': { backgroundColor: 'action.hover' }
-                            }}
-                          >
-                            Match {sortField === 'match' && (sortDirection === 'asc' ? '↑' : '↓')}
-                          </TableCell>
-                          <TableCell 
-                            onClick={() => handleSort('playerName')}
-                            sx={{ 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              backgroundColor: 'background.paper',
-                              borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                              '&:hover': { backgroundColor: 'action.hover' }
-                            }}
-                          >
-                            Player {sortField === 'playerName' && (sortDirection === 'asc' ? '↑' : '↓')}
-                          </TableCell>
-                          <TableCell 
-                            onClick={() => handleSort('action')}
-                            sx={{ 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              backgroundColor: 'background.paper',
-                              borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                              '&:hover': { backgroundColor: 'action.hover' }
-                            }}
-                          >
-                            Action {sortField === 'action' && (sortDirection === 'asc' ? '↑' : '↓')}
-                          </TableCell>
-                          <TableCell 
-                            onClick={() => handleSort('result')}
-                            sx={{ 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              backgroundColor: 'background.paper',
-                              borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                              '&:hover': { backgroundColor: 'action.hover' }
-                            }}
-                          >
-                            Result {sortField === 'result' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                        <Typography variant="body1">
+                                          Percentage: <strong>{formatPercentage(count, data.total)}</strong>
+                                        </Typography>
+                                      </Grid>
+                                      <Grid item xs={12} md={8}>
+                                        <Typography variant="subtitle2" gutterBottom>Players:</Typography>
+                                        <Box sx={{ pl: 2 }}>
+                                          {Object.entries(data.players)
+                                            .filter(([_, playerData]) => playerData.results[result])
+                                            .sort((a, b) => b[1].results[result] - a[1].results[result])
+                                            .map(([playerName, playerData]) => (
+                                              <Box 
+                                                key={playerName} 
+                                                sx={{ 
+                                                  display: 'flex', 
+                                                  justifyContent: 'space-between',
+                                                  py: 0.5,
+                                                  borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+                                                }}
+                                              >
+                                                <Typography>{playerName}</Typography>
+                                                <Typography>
+                                                  {playerData.results[result]} ({formatPercentage(playerData.results[result], playerData.total)})
+                                                </Typography>
+                                              </Box>
+                                            ))}
+                                        </Box>
+                                      </Grid>
+                                    </Grid>
+                                  </Paper>
+                                ))}
+                              </Box>
+                            </Collapse>
                           </TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {getUngroupedStats().map((stat, index) => (
-                          <TableRow 
-                            key={index}
-                            sx={{
-                              '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                              }
-                            }}
-                          >
-                            <TableCell>
-                              {new Date(stat.date).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'numeric',
-                                day: 'numeric'
-                              })}
-                            </TableCell>
-                            <TableCell>
-                              {`${stat.matchDisplay.teamName} vs ${stat.matchDisplay.opponent}`}
-                              {stat.matchDisplay.location && ` (${stat.matchDisplay.location})`}
-                            </TableCell>
-                            <TableCell>{stat.playerName || 'Unknown Player'}</TableCell>
-                            <TableCell>{stat.action}</TableCell>
-                            <TableCell>{getFormattedResult(stat.action, stat.result)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </>
-                  )}
+                      </React.Fragment>
+                    ))}
+                  </TableBody>
                 </Table>
               </TableContainer>
             )}
